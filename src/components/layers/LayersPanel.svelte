@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Layers, Eye, EyeOff, LockKeyhole, UnlockKeyhole, Trash2, SlidersHorizontal, Image, GripVertical, ChevronUp, ChevronDown, Info } from '@lucide/svelte';
   import IconButton from '../common/IconButton.svelte';
+  import EffectsPanel from '../effects/EffectsPanel.svelte';
   import { documentStore, selectedLayerId, assetStore, updateLayer, deleteLayer, reorderLayer } from '../../lib/editor/store';
   import type { BlendMode } from '../../lib/document/types';
   let tab = $state<'layers' | 'effects'>('layers');
@@ -40,11 +41,11 @@
         {/each}
       </div>
     {:else}
-      <div class="effects-empty"><SlidersHorizontal size={28} strokeWidth={1.3}/><strong>Effect Stack</strong><p>Pluginové efekty navazují v další fázi. Tento základ uchovává originální obrázky a parametry vrstev odděleně.</p><span class="outline-badge">PLÁNOVÁNO · FÁZE 3</span></div>
+      <EffectsPanel {layer}/>
     {/if}
     <div class="layer-list-footer"><span>{$documentStore.layers.filter(layer => layer.visible).length} viditelných</span><span>Vrchní vrstva je nahoře</span></div>
   </section>
-  <section class="panel properties-panel">
+  {#if tab === 'layers'}<section class="panel properties-panel">
     <div class="section-heading"><SlidersHorizontal size={15}/><strong>Vlastnosti vrstvy</strong>{#if layer?.locked}<LockKeyhole size={14}/>{/if}</div>
     {#if layer}
       <div class="properties-content">
@@ -65,6 +66,6 @@
     {:else}
       <div class="properties-empty"><Image size={25} strokeWidth={1.2}/><p>Vyberte vrstvu pro úpravu<br/>jejích vlastností.</p></div>
     {/if}
-  </section>
+  </section>{/if}
   <div class="inspector-note"><Info size={15}/><p>Obraz je výsledkem dokumentu.<br/>Originál se nikdy nepřepisuje.</p></div>
 </aside>

@@ -1,7 +1,7 @@
 {
   "name": "rasterlab",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -12,11 +12,13 @@
     "tauri": "tauri",
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
-    "test:browser": "node scripts/smoke.mjs"
+    "test:browser": "node scripts/smoke.mjs",
+    "test:features": "node scripts/features.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.50.0",
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.8.1",
     "pixi.js": "^8.0.0",
     "svelte": "^5.0.0"
   },

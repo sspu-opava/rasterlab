@@ -23,7 +23,7 @@ try {
   await page.screenshot({ path: 'test-results/foundation-empty.png' });
 
   // A real decoded PNG enters the pipeline, not a placeholder asset.
-  await page.locator('input[type=file]').setInputFiles('src-tauri/icons/icon.png');
+  await page.locator('input[accept^="image/"]').setInputFiles('src-tauri/icons/icon.png');
   await page.locator('.layer-row').waitFor();
   assert.equal(await page.locator('.layer-row').count(), 1);
   await frame();
@@ -75,10 +75,10 @@ try {
     const context = canvas.getContext('2d'); context.fillStyle = '#e43532'; context.fillRect(0, 0, 32, 32);
     return ['image/jpeg', 'image/webp'].map(type => ({ type, data: canvas.toDataURL(type).split(',')[1] }));
   });
-  await page.locator('input[type=file]').setInputFiles(formats.map((format, i) => ({ name: i === 0 ? 'test.jpg' : 'test.webp', mimeType: format.type, buffer: Buffer.from(format.data, 'base64') })));
+  await page.locator('input[accept^="image/"]').setInputFiles(formats.map((format, i) => ({ name: i === 0 ? 'test.jpg' : 'test.webp', mimeType: format.type, buffer: Buffer.from(format.data, 'base64') })));
   await page.getByRole('button', { name: 'Skrýt test', exact: true }).first().waitFor();
   assert.equal(await page.locator('.layer-row').count(), 4);
-  await page.locator('input[type=file]').setInputFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: Buffer.from('invalid bitmap') });
+  await page.locator('input[accept^="image/"]').setInputFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: Buffer.from('invalid bitmap') });
   await page.getByRole('alert').waitFor();
   assert.equal(await page.locator('.layer-row').count(), 4, 'Invalid import must preserve the document');
   await page.getByRole('button', { name: 'Zavřít chybu' }).click();

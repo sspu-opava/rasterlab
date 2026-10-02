@@ -2,8 +2,9 @@
   import { onMount } from 'svelte';
   import { get } from 'svelte/store';
   import { ImagePlus, Move, MousePointer2 } from '@lucide/svelte';
-  import { assets, documentStore, viewportStore, viewAction, tool, reportError, importFiles, selectedLayerId, updateLayer } from '../../lib/editor/store';
-  import { PixiRenderEngine } from '../../lib/render/PixiRenderEngine';
+  import { assets, documentStore, viewportStore, viewAction, tool, reportError, importFiles, selectedLayerId, updateLayer, effectErrors, historyState, finishEdit } from '../../lib/editor/store';
+  import { DocumentRenderEngine } from '../../lib/render/DocumentRenderEngine';
+  import { setExporter } from '../../lib/project/export';
   import { documentPoint, fitViewport, zoomAt } from '../../lib/render/viewport';
   import type { Point } from '../../lib/document/types';
   let { onimport }: { onimport: () => void } = $props();
@@ -17,7 +18,7 @@
   onMount(() => {
     let disposed = false;
     let frame = 0;
-    const engine = new PixiRenderEngine(assets, reportError);
+    const engine = new DocumentRenderEngine(assets, reportError, errors => effectErrors.set(errors));
     const unsubscribers: (() => void)[] = [];
     const listeners = new AbortController();
     const schedule = () => {
@@ -55,7 +56,7 @@
       if (drag.mode === 'pan') viewportStore.update(view => ({ ...view, x: drag!.x + dx, y: drag!.y + dy }));
       else if (drag.layerId) updateLayer(drag.layerId, { position: { x: drag.x + dx / get(viewportStore).zoom, y: drag.y + dy / get(viewportStore).zoom } });
     }, options);
-    const stop = () => { drag = null; host.classList.remove('dragging'); };
+    const stop = () => { if (drag) finishEdit(); drag = null; host.classList.remove('dragging'); };
     host.addEventListener('pointerup', stop, options);
     host.addEventListener('pointercancel', stop, options);
     host.addEventListener('lostpointercapture', stop, options);
@@ -81,18 +82,18 @@
     observer.observe(host);
     void engine.init(host).then(() => {
       if (disposed) { engine.destroy(); return; }
-      ready = true; fit();
+      ready = true; fit(); setExporter((document, format, quality) => engine.export(document, format, quality));
       unsubscribers.push(documentStore.subscribe(schedule), viewportStore.subscribe(schedule), viewAction.subscribe(action => {
         if (action.type === 'fit') fit();
         else { const doc = get(documentStore); viewportStore.set({ zoom: 1, x: (host.clientWidth - doc.width) / 2, y: (host.clientHeight - doc.height) / 2 }); }
       }));
     }).catch(error => { if (!disposed) reportError(error); });
-    return () => { disposed = true; cancelAnimationFrame(frame); observer.disconnect(); listeners.abort(); unsubscribers.forEach(unsubscribe => unsubscribe()); engine.destroy(); };
+    return () => { disposed = true; setExporter(null); cancelAnimationFrame(frame); observer.disconnect(); listeners.abort(); unsubscribers.forEach(unsubscribe => unsubscribe()); engine.destroy(); };
   });
 </script>
 
 <section class="workspace" aria-label="Pracovní plocha">
-  <div class="document-tab"><span class="tab-dot"></span><span>{$documentStore.name}.rlab</span><span class="document-size">{$documentStore.width} × {$documentStore.height}</span><span class="workspace-label">DOCUMENT</span></div>
+  <div class="document-tab"><span class="tab-dot"></span><span>{$documentStore.name}.json{$historyState.dirty ? ' *' : ''}</span><span class="document-size">{$documentStore.width} × {$documentStore.height}</span><span class="workspace-label">DOCUMENT</span></div>
   <div bind:this={host} class="canvas-host" class:pan-cursor={$tool === 'pan'}>
     {#if ready && $documentStore.layers.length === 0}
       <div class="canvas-empty"><span class="canvas-empty-icon"><ImagePlus size={29} strokeWidth={1.3}/></span><strong>Prostor pro váš další experiment</strong><p>Přetáhněte sem obrázek nebo začněte importem.</p><button class="small-button" onclick={onimport}><ImagePlus size={15}/> Importovat obrázek</button></div>

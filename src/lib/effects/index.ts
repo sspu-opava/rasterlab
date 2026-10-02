@@ -1,0 +1,10 @@
+import { EffectRegistry } from './core/EffectRegistry';
+import { grayscale } from './color/grayscale';
+import { threshold } from './color/threshold';
+import { posterize } from './color/posterize';
+import { noise } from './generative/noise';
+import { rgbShift } from './distortion/rgbShift';
+import { wave } from './distortion/wave';
+import { booleanEffect } from './boolean/boolean';
+export const effectRegistry = new EffectRegistry();
+for (const effect of [grayscale, threshold, posterize, noise, rgbShift, wave, ...(['XOR', 'AND', 'OR', 'NAND'] as const).map(booleanEffect)]) effectRegistry.register(effect);

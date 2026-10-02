@@ -8,9 +8,11 @@ interface RuntimeAsset { record: AssetRecord; file: Blob; image: HTMLImageElemen
 const acceptedTypes = new Set(['image/png', 'image/jpeg', 'image/webp']);
 
 export class AssetManager {
+  revision = 0;
   private assets = new Map<string, RuntimeAsset>();
 
-  async import(file: File): Promise<AssetRecord> {
+  async import(file: File, id: string = crypto.randomUUID()): Promise<AssetRecord> {
+    if (this.assets.has(id)) throw new Error('Duplicitní ID assetu.');
     if (!acceptedTypes.has(file.type)) throw new Error('Podporované formáty: PNG, JPEG a WebP.');
     if (file.size > 100 * 1024 * 1024) throw new Error('Obrázek je příliš velký (maximum 100 MB).');
     const url = URL.createObjectURL(file);
@@ -22,10 +24,11 @@ export class AssetManager {
         throw new Error('Maximální rozměr obrázku je 8192 px.');
       }
       const record: AssetRecord = {
-        id: crypto.randomUUID(), name: file.name, width: image.naturalWidth,
+        id, name: file.name, width: image.naturalWidth,
         height: image.naturalHeight, mimeType: file.type, url,
       };
       this.assets.set(record.id, { record, file, image });
+      this.revision++;
       log('ASSET', 'Imported', record.id);
       return record;
     } catch (error) {
@@ -49,7 +52,11 @@ export class AssetManager {
       asset.texture?.destroy(true);
       URL.revokeObjectURL(asset.record.url);
       this.assets.delete(id);
+      this.revision++;
     }
   }
   clear(): void { this.removeUnused(new Set()); }
+  replaceWith(other: AssetManager): void {
+    this.clear(); this.assets = other.assets; other.assets = new Map(); this.revision++;
+  }
 }

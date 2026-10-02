@@ -1,39 +1,37 @@
-# Architektura RasterLabu — foundation
-
-## Oddělení vrstev
+# Architektura RasterLabu 0.2
 
 ```text
-Svelte UI → documentStore / RasterDocument → RenderGraph → PixiRenderEngine → PixiJS 8 WebGL
-                      ↘ AssetManager (UUID → původní Blob, dekódovaný obraz, Texture)
+Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
+                         ↕ CommandHistory          ↕ EffectRegistry           ↕ RenderTargetPool
+                         ↕ ProjectSerializer       ↕ AssetManager (UUID → originál → Texture)
 ```
 
-`src/lib/document` obsahuje čisté serializovatelné typy a továrny. Model nikdy neobsahuje DOM objekty, soubory, URL ani Pixi instance. `RasterLayer.assetId` odkazuje na správce assetů. `position` je v dokumentových pixelech, `rotation` ve stupních a `scale` je faktor vůči originálnímu rozměru assetu. Vrstvy jsou v modelu řazeny od horní po spodní.
+## Model a operace
 
-`src/lib/assets/AssetManager.ts` spravuje originální Blob, životnost object URL, dekódování a lazy vytvoření GPU textury. Import chybných dat bezpečně uvolní URL. Jedna textura se sdílí mezi více instancemi stejného assetu. Odstraňování nepoužívaných assetů vyžaduje množinu všech referencí, včetně budoucí historie; proto se při smazání vrstvy zatím automaticky nespouští.
+`document/types.ts` obsahuje serializovatelné modely. Bitmapy se nikdy nepřepisují, vrstvy odkazují na asset UUID. Position je v dokumentových pixelech, scale vůči rozměrům originálu, rotation ve stupních. Vrstvy v modelu jsou od horní po spodní, efekty od prvního po poslední. DOM a GPU objekty patří výhradně do runtime.
 
-`src/lib/editor/store.ts` propojuje uživatelské operace se změnami modelu. Svelte komponenty zobrazují stav a vyvolávají operace. Nedekódují bitmapy ani nevytvářejí shadery.
+`editor/state.ts` implementuje operace vrstev, efektů a projektů. `store.ts` je veřejný export. CommandHistory ukládá příkaz s immutable modely před/po změně, ne s pixely. Modely sdílejí nezměněné větve a asset UUID. Historie má 200 kroků, nová editace zahodí redo větev, souvislé změny sliderů/dragu se slučují. Undo/redo nesmějí přepisovat aktivní save/load/export operaci. Uložený model se eviduje samostatně a hvězdička ukazuje neuložené změny.
 
-## Renderer a viewport
+AssetManager vlastní originální Blob, object URL, dekódovaný obraz a lazy Texture. Při load se vytvoří dočasný manager a všechny bitmapy se ověří před výměnou živého dokumentu. Revision správce invaliduje cache po výměně zdrojových obrazů, i když projekt používá stejná UUID. Library v paměti drží i nepoužité importy kvůli undo; save zahrnuje jen reference aktivního dokumentu.
 
-`PixiRenderEngine` vlastní Application, kontejnery, checkerboard, klip a hranici dokumentu. WebGL je zvolen při inicializaci; model ani graf nejsou svázány s backendem. V budoucnu lze přidat jiný renderer bez změny dokumentového formátu.
+## Efekty
 
-Viewport je samostatný `{zoom,x,y}` a mění pouze transformaci kontejneru. Změna okna mění rozměr výstupního canvasu, nikoliv dokument. Kolečko zachovává bod pod ukazatelem. Fit a 100 % explicitně centrují dokument. Document clipping zamezuje vykreslování bitmap mimo jeho hranice. Renderer běží na požádání, změny během jednoho animation frame se slučují. Sprites i textury se mezi změnami parametrů používají znovu.
+Efekty mají nezávislou definici a instance. Registry, validace a renderer API jsou v `effects/core`, moduly v `color`, `distortion`, `generative`, `boolean`. UI čte metadata; není v něm seznam konkrétních efektů ani shaderové algoritmy. `createRenderer` vytváří persistentní runtime, `update` pouze mění uniformy a vstupy. Registruje se interní kód, žádné externí JS pluginy se nenačítají.
 
-`RenderGraph` sestavuje uzly source → effect stack → layer output → document. Skupiny mají závislosti na dětech, sekundární vstupy efektů na výstupech referencovaných vrstev. Invalidace prochází pouze následníky a chrání se před cykly. V této fázi graf slouží k evidenci změn a přípravě budoucího vyhodnocování; skutečný shaderový evaluation/cache ještě není implementován.
+Sekundární vstup je post-effect obsah druhé vrstvy v dokumentových souřadnicích, před krytím/blendem vrstvy. Reference může použít i skrytou vrstvu. Store a deserializer odmítají cykly; renderer má ještě vlastní ochranu. Selhání jednotlivého efektu vrací jeho nezměněný vstup, loguje diagnostiku a označí efekt v panelu. Export při chybě aktivního efektu skončí čitelnou chybou.
 
-## Plán modulů
+## Render
 
-- `layers`: příští iterace — rekurzivní operace skupin, transformace a masky.
-- `effects/core`: definice parametrů, validace, registry, renderer kontrakt.
-- `effects/{color,boolean,distortion,material,generative}`: samostatně registrované moduly.
-- `history`: příkazy s hodnotami modelu před a po změně, žádné kopie bitmap.
-- `project`: verzovaný JSON a adresář assets, později migrations; bez ZIP podpory v první fázi.
-- `generators`: nyní pouze development demo, později generátory produkující stejný výstup jako raster.
+DocumentRenderEngine vlastní Application a editorový viewport. GraphRenderer vlastní evaluaci source → effect stack → layer output → document, cache RenderTexture a efektové runtimy. Zdroj je vykreslen v rozměru dokumentu se svou transformací; efekty se počítají v tomto prostoru. Krytí, viditelnost a blend se použijí při skládání vrstev. Skupiny se rekurzivně skládají a jejich source obsahuje výstupy dětí.
 
-## Limity
+GraphRenderer znovu počítá jen dirty uzly a následníky. Čisté source/efektové textury se používají z cache. RenderTargetPool opakovaně používá uvolněné textury; velikost volného poolu je omezená. Shader uniformy se aktualizují bez nové alokace render targetu při každém pohybu slideru. Přepnutí projektu/rozměrů/revision uvolní cache.
 
-Foundation renderuje rastry a interní group container; ostatní varianty LayerNode jsou typová příprava. UI pracuje s rastrovými vrstvami na nejvyšší úrovni. Effect Stack je zatím jen součást modelu. Preview/final mají připravené typy, výstupní rendering a export se přidají později. Maximální importovaný rozměr je 8192 px a velikost 100 MB; GPU může mít vlastní přísnější omezení. Paměť a GPU prostředky se uvolňují při zániku rendereru / správce assetů.
+Export má samostatný final GraphRenderer bez editorového viewportu, checkerboardu a hranice. Preview/final nyní mají stejné rozlišení. Rozměry a režim jsou v EffectRenderContext; budoucí nižší preview rozlišení se přidá v renderovací vrstvě. WebGL adapter používá GLSL 3; backendová výměna nevyžaduje změnu dokumentu nebo UI metadat.
 
-## Ověření
+## Operační systém
 
-Unit testy pokrývají rozměry dokumentu, JSON roundtrip, fit importu, transformace viewportu a downstream invalidaci včetně více vstupů. Browser smoke test ověřuje inicializaci WebGL, import skutečného PNG, zoom, pan, krytí, viditelnost a vlastní rozměry. Desktopový build ověřuje celý Rust/MSVC/WebView2 základ.
+Rust je omezen na filesystem: `save_project`, `load_project`, `write_export`. Výběr cest řeší oficiální dialog plugin. Assets mají validované relativní cesty, soubory se zapisují atomicky a manifest poslední. UI nedostává obecný filesystem plugin. Podrobnosti jsou v [projektovém formátu](project-format.md).
+
+## Rozsah
+
+UI plně ovládá rastrové vrstvy nejvyšší úrovně. Serializace a render podporují skupiny, ale jejich vytváření a ovládání dětí přijde v další iteraci. Masky, adjustment/generated layer renderery, Crumple, Strips, Tiles a WebGPU zatím nejsou implementovány. Parametrové typy a datové modely pro ně existují.
