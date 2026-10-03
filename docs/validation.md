@@ -1,9 +1,9 @@
-# Ověření RasterLabu 0.2
+# Ověření RasterLabu 0.4
 
-Windows, 2. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro `x86_64-pc-windows-msvc`, Visual Studio 2019 Community C++ tools, WebView2.
+Windows, 3. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro `x86_64-pc-windows-msvc`, Visual Studio 2019 Community C++ tools, WebView2.
 
 - TypeScript/Svelte check: 0 chyb a 0 varování.
-- Unit tests: 20 testů modelu, viewportu, grafu, registry, parametrů, seedovaného PRNG, boolean operací, historie a serializace.
+- Unit tests: 26 testů modelu, viewportu, grafu, registry, parametrů, seedovaného PRNG, boolean/modulo operací, historie, serializace a procedurálních map. Mapy kontrolují bijekci shuffle, stabilitu seedu, změny rozměrů, normalizované záhyby a Voronoi centra/vektory.
 - Rust: 2 testy skutečného save/load/overwrite a odmítnutí traversal/future version.
 - Frontend production build úspěšný.
 - Browser smoke: WebGL, PNG/JPEG/WebP import, opacity/visibility porovnané přes canvas snímky, blend modes, zoom, pan, lock, rozměry a neplatný bitmapový import.
@@ -11,10 +11,12 @@ Windows, 2. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro 
 - Pixelové testy boolean shaderů: známé 8bit vstupy ověřují XOR/AND/OR/NAND RGB výstupy a binary threshold režim.
 - Produkční browser testy aplikují CSP převzatou z Tauri konfigurace. Shader helper nevyžaduje eval.
 - Ověřeno přeskupení efektů přetažením i šipkou a klávesové Ctrl+Z / Ctrl+Shift+Z; undo obnoví původní pořadí i výsledné pixely.
-- Desktop release build vytvořil EXE a NSIS instalátor 0.2.0. Distribuční EXE bylo spuštěno; WebView2 strom potvrzuje inicializovaný canvas, Fit na 65 %, UI verze 0.2 a žádnou chybovou výstrahu.
+- Catalog test: 12 experimentálních GPU efektů (sady 0.3 a 0.4), determinismus a změna seedu, bypass, undo seedu, nulové transformace a síla, 64 dlaždic, 32 Voronoi buněk a jediná buňka bez vnitřních hran. Průhledné mezery v PNG, nový smíšený stack i dvouvstupový Modulo Mix po save/load mají shodné exportované bytes. Bit Plane Extractor kontroluje přesné hodnoty bitů 0 a 1 kanálu 0xaa i invert. Modulo Mix kontroluje známé RGB výstupy s tolerancí jednoho 8bit kroku a luminanční režim.
+- Desktop release build vytvořil EXE a NSIS instalátor 0.4.0. Distribuční kopie jsou v `releases/`.
+- Nativní UI kontrolu blokuje nedostupné připojení computer-use: `Computer Use native pipe is unavailable` / os error 2. Start EXE a nativní dialogy této verze nebyly automaticky ověřeny. Browser testy běží proti produkčnímu buildu s CSP desktopové aplikace.
 - `npm audit`: 0 známých zranitelností.
 
-Snímky: `test-results/foundation-empty.png`, `foundation-demo.png`, `effects-projects.png`.
+Snímky: `test-results/foundation-empty.png`, `foundation-demo.png`, `effects-projects.png`, `catalog-effects.png`.
 
 Vývojový port 1420 byl v tomto systému rezervovaný Windows; Vite/Tauri používají 5173. Nově instalovaný Rust vyžaduje nový terminál nebo aktualizaci PATH aktuálního procesu.
 

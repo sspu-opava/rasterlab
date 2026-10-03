@@ -1,7 +1,7 @@
 {
   "name": "rasterlab",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.4.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -13,7 +13,8 @@
     "desktop": "tauri dev",
     "desktop:build": "tauri build",
     "test:browser": "node scripts/smoke.mjs",
-    "test:features": "node scripts/features.mjs"
+    "test:features": "node scripts/features.mjs",
+    "test:catalog": "node scripts/catalog.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.50.0",

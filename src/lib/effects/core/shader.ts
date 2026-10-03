@@ -17,11 +17,17 @@ export const numberParameter = (id: string, label: string, value: number, min: n
 export const seedParameter: EffectParameterDefinition = { id: 'seed', label: 'Seed', type: 'seed', default: 76123, min: 0, max: 999999, step: 1 };
 
 /** Each module supplies declarations and shader body; this is the shared WebGL adapter. */
-export function shaderEffect(specification: Omit<EffectDefinition, 'createRenderer' | 'version' | 'inputs'> & { body: string; inputs?: EffectDefinition['inputs'] }): EffectDefinition {
-  const { body, ...metadata } = specification;
+export interface ShaderUniform { value: number | Float32Array; type: 'f32' | 'vec2<f32>' | 'vec4<f32>'; size?: number }
+export interface ShaderData {
+  declarations: string;
+  create(): { uniforms: Record<string, ShaderUniform>; update(parameters: Record<string, ParameterValue>): void };
+}
+export function shaderEffect(specification: Omit<EffectDefinition, 'createRenderer' | 'version' | 'inputs'> & { body: string; helpers?: string; data?: ShaderData; inputs?: EffectDefinition['inputs'] }): EffectDefinition {
+  const { body, helpers = '', data, ...metadata } = specification;
   const definition: EffectDefinition = {
     ...metadata, version: '1.0.0', inputs: metadata.inputs ?? [],
     createRenderer(context) {
+      const generated = data?.create();
       const declarations = definition.parameters.filter(parameter => !['layer', 'color'].includes(parameter.type)).map(parameter => `uniform float p_${parameter.id};`).join('\n');
       const fragment = `#version 300 es
 precision highp float;
@@ -32,6 +38,7 @@ uniform sampler2D uSecondary;
 uniform vec4 uInputSize;
 uniform vec2 uSize;
 ${declarations}
+${data?.declarations ?? ''}
 vec4 sampleImage(vec2 uv) {
   if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return vec4(0.0);
   return texture(uTexture, uv * uSize * uInputSize.zw);
@@ -39,13 +46,14 @@ vec4 sampleImage(vec2 uv) {
 vec3 straight(vec4 c) { return c.a > 0.00001 ? c.rgb / c.a : vec3(0.0); }
 float luminance(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 float hash(vec3 v) { v = fract(v * vec3(0.1031, 0.1030, 0.0973)); v += dot(v, v.yxz + 33.33); return fract((v.x + v.y) * v.z); }
+${helpers}
 void main() {
   vec2 uv = vTextureCoord / (uSize * uInputSize.zw);
   vec4 source = sampleImage(uv);
   vec3 color = straight(source);
   ${body}
 }`;
-      const uniforms: Record<string, { value: number | Float32Array; type: 'f32' | 'vec2<f32>' }> = { uSize: { value: new Float32Array([context.width, context.height]), type: 'vec2<f32>' } };
+      const uniforms: Record<string, ShaderUniform> = { ...generated?.uniforms, uSize: { value: new Float32Array([context.width, context.height]), type: 'vec2<f32>' } };
       for (const parameter of definition.parameters) {
         if (!['layer', 'color'].includes(parameter.type)) uniforms[`p_${parameter.id}`] = { value: 0, type: 'f32' };
       }
@@ -54,6 +62,8 @@ void main() {
       return {
         filter,
         update(parameters: Record<string, ParameterValue>, next: EffectRenderContext) {
+          generated?.update(parameters);
+          if (generated) for (const [name, uniform] of Object.entries(generated.uniforms)) group.uniforms[name] = uniform.value;
           (group.uniforms.uSize as Float32Array).set([next.width, next.height]);
           for (const parameter of definition.parameters) {
             const value = parameters[parameter.id];

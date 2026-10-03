@@ -1,4 +1,4 @@
-# Effect API 0.2
+# Effect API 0.4
 
 Nový efekt je samostatný modul. Definujte metadata a renderer, potom zavolejte `effectRegistry.register(definition)` v `src/lib/effects/index.ts`. UI si automaticky vytvoří nabídku a ovládací prvky. Neupravujte Svelte komponenty pro nový efekt.
 
@@ -43,6 +43,16 @@ Helper automaticky mapuje float/integer/seed na float uniform, boolean na 0/1 a 
 Deklarujte `inputs: [{id:'secondary',label:'Druhá vrstva',required:true}]`. GraphRenderer vyhodnotí `instance.inputs.secondary` a předá texturu v dokumentových souřadnicích. Shader helper zpřístupní `uSecondary`; jeho UV jsou 0–1. Chybějící vstup způsobí bypass s diagnostikou. Další pojmenované vstupy vyžadují rozšíření backendového adapteru; současný executor poskytuje primary a secondary.
 
 Seed má tlačítko Randomize používající crypto pouze při uživatelské operaci. V renderu nikdy nevolejte Math.random. CPU procedury mohou používat `seededRandom(seed)` z `utils/random.ts`; Noise používá deterministický hash pixelové pozice a uloženého seedu v shaderu. Stejný seed a parametry na stejném backendu reprodukují obraz.
+
+## Procedurální data a sdílené funkce
+
+`shaderEffect` přijímá také `helpers` (GLSL funkce vložené před main) a volitelný `data: ShaderData`. Data deklarují GLSL uniformy v `declarations`; `create()` při vytvoření runtime vrátí vlastní uniformy a `update(parameters)`. Uniformy obsahují `value`, `type` a volitelné `size` pro pole. Pole aktualizujte na místě; adapter pak volá `UniformGroup.update()`. Každá instance má vlastní data. CPU data se obnoví z uložených parametrů a nepatří do projektu.
+
+`collage/fragments.ts` generuje Fisher–Yates permutaci do `uOrder[64]`; obnovuje ji jen při změně rozměrů, shuffle nebo seedu. `material/foldMap.ts` generuje až 32 záhybů do `uFolds[32]` a poskytuje sdílenou GLSL funkci výškového pole s analytickým gradientem. Crumple používá gradient pro deformaci i osvětlení. Procedurální generátory jsou oddělené od UI a shaderů konkrétních efektů.
+
+Novou sadu ověřuje `npm run test:catalog` proti produkčnímu preview na portu 4173 se stejnou CSP jako desktop.
+
+`collage/voronoi.ts` poskytuje další sdílený generátor: normalizované pozice buněk a vektory posunu do `uSites[32]`. GLSL helper vyhledává nejbližší centrum v pixelech dokumentu a počítá vzdálenost od skutečných bisektorů buněk, takže šířka mezer zůstává v pixelech i u obdélníkového dokumentu. Modulo Mix používá stejný secondary vstup jako boolean efekty; normalizovaný součet kanálů se zalamuje operací `mod(sum, divisor) / divisor * gain`.
 
 ## Testování a chyby
 

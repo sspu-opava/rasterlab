@@ -1,6 +1,6 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.2 přidává efekty, projekty, export a historii. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.4 rozšiřuje nabídku na 22 efektů včetně nepravidelných koláží, inkoustu, reliéfu a kombinování vrstev. Rozhraní vychází z `gui/gui-navrh.png`.
 
 ## Spuštění
 
@@ -18,13 +18,14 @@ npm test
 npm run build
 npm run test:browser # při běžícím dev serveru; jednou: npx playwright install chromium
 npm run test:features
+npm run test:catalog # produkční preview na portu 4173
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 npm run desktop:build
 ```
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.2.0.exe` a `releases/RasterLab-0.2.0-setup.exe`. Ověřovací desktop build používá `CARGO_TARGET_DIR=src-tauri/target-v02`, protože původní verze zůstává otevřená.
+Připravené distribuční soubory této iterace: `releases/RasterLab-0.4.0.exe` a `releases/RasterLab-0.4.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -38,6 +39,12 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 - Výběr, viditelnost, zámek, krytí, blend mode, pořadí a transformace rastrových vrstev.
 - Demo experiment generovaný lokálně, bez přístupu k síti.
 - Grayscale, Threshold, Posterize, Noise, RGB Shift, Wave, XOR, AND, OR a NAND jako samostatné GPU moduly.
+- Crumple: procedurální záhyby deformující obraz, se světlem a stínem.
+- Strips a Random Tiles: přeskupení fragmentů, průhledné mezery a transformace.
+- Bit Plane Extractor, Photocopy a Interference: bitové roviny kanálů, textura kopírky a vlnová interference.
+- Voronoi Collage: až 32 nepravidelných buněk s posunem obsahu a průhlednými hranami.
+- Ink Bleed a Surface Relief: šíření tmavého inkoustu uvnitř obrazu a osvětlení luminanční výškové mapy.
+- Contour Atlas, Scanline Displace a Modulo Mix: jasové vrstevnice, seedované posuny řádků a modulo kombinace dvou vrstev.
 - Automatické UI parametrů, vícenásobné instance, změna pořadí přetažením nebo šipkami, reset a Before/After bypass.
 - Více vstupů odkazem na jinou vrstvu; ochrana proti cyklům a izolace chyb efektu.
 - Uložení, Uložit jako a otevření verzovaného projektu včetně originálních obrázků.
@@ -63,6 +70,6 @@ Desktop ukládá zvolený `.json` a vedle něj adresář `assets/`. Přenášejt
 
 Historie uchovává nejvýše 200 příkazů, nepersistuje se v projektu a při otevření/novém dokumentu se resetuje. Neznámý nebo selhávající efekt zachová v náhledu svůj vstup a zobrazí diagnostiku; export se při chybě aktivního efektu přeruší.
 
-Další iterace: UI skupin, masky, generátorové vrstvy a experimentální Crumple/Strips/Tiles. Tyto funkce zatím nejsou součástí 0.2. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
+Další iterace: UI skupin, masky, generátorové vrstvy a další efekty z katalogu. Interference nyní moduluje jas bitmapové vrstvy; samostatné generátorové vrstvy ještě nejsou implementovány. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
 
 Podrobnosti: [architektura](docs/architecture.md), [Effect API](docs/effect-api.md), [projektový formát](docs/project-format.md), [vykreslování](docs/rendering.md), [ověření](docs/validation.md).

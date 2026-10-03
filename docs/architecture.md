@@ -1,4 +1,4 @@
-# Architektura RasterLabu 0.2
+# Architektura RasterLabu 0.4
 
 ```text
 Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
@@ -34,4 +34,4 @@ Rust je omezen na filesystem: `save_project`, `load_project`, `write_export`. V�
 
 ## Rozsah
 
-UI plně ovládá rastrové vrstvy nejvyšší úrovně. Serializace a render podporují skupiny, ale jejich vytváření a ovládání dětí přijde v další iteraci. Masky, adjustment/generated layer renderery, Crumple, Strips, Tiles a WebGPU zatím nejsou implementovány. Parametrové typy a datové modely pro ně existují.
+UI plně ovládá rastrové vrstvy nejvyšší úrovně. Serializace a render podporují skupiny, ale jejich vytváření a ovládání dětí přijde v další iteraci. Masky, adjustment/generated layer renderery a WebGPU zatím nejsou implementovány. Parametrové typy a datové modely pro ně existují. Crumple, Strips, Random Tiles, Bit Plane Extractor, Photocopy a Interference jsou samostatné interní moduly. CPU generátory fragmentů a záhybů jsou oddělené od GPU renderu a ukládají se pouze jejich parametry.

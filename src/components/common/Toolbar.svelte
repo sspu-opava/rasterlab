@@ -12,9 +12,9 @@
 </script>
 
 <header class="titlebar">
-  <div class="brand"><span class="brand-mark">R</span><strong>RasterLab</strong><span class="version">0.2</span></div>
+  <div class="brand"><span class="brand-mark">R</span><strong>RasterLab</strong><span class="version">0.4</span></div>
   <div class="titlebar-note">EXPERIMENTAL RASTER STUDIO</div>
-  <span class="phase-badge">Effects & Projects</span>
+  <span class="phase-badge">Experimental Effects</span>
 </header>
 <nav class="toolbar" aria-label="Nástroje editoru">
   <IconButton label="Nový dokument (Ctrl+N)" disabled={$busy} onclick={onnew}><FilePlus2 size={19}/></IconButton>
