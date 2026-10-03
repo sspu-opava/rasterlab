@@ -5,5 +5,7 @@ export default defineConfig({
   plugins: [svelte()],
   clearScreen: false,
   server: { port: 5173, strictPort: true, watch: { ignored: ['**/src-tauri/**'] } },
-  build: { target: 'es2022' },
+  build: { target: 'es2022', rollupOptions: { output: { manualChunks(id) {
+    if (id.replace(/\\/g, '/').includes('/node_modules/svelte/')) return 'svelte';
+  } } } },
 });

@@ -76,8 +76,13 @@ export class GraphRenderer {
             if (runtime?.effectId !== instance.effectId) { runtime?.renderer.destroy(); runtime = undefined; }
             if (!runtime) { runtime = { effectId: instance.effectId, renderer: definition.createRenderer({ ...context, secondary }) }; this.effects.set(instance.id, runtime); }
             runtime.renderer.update(validateParameters(definition, instance.parameters), { ...context, secondary });
-            const sprite = new Sprite(input); sprite.filterArea = new Rectangle(0, 0, document.width, document.height); sprite.filters = [runtime.renderer.filter];
-            try { input = draw(instance.id, sprite); } finally { sprite.filters = []; sprite.destroy(); }
+            if (runtime.renderer.render) {
+              const output = target(instance.id);
+              runtime.renderer.render(input, output, this.renderer); input = output;
+            } else {
+              const sprite = new Sprite(input); sprite.filterArea = new Rectangle(0, 0, document.width, document.height); sprite.filters = [runtime.renderer.filter];
+              try { input = draw(instance.id, sprite); } finally { sprite.filters = []; sprite.destroy(); }
+            }
             this.errors.delete(instance.id);
           } catch (error) {
             const message = error instanceof Error ? error.message : 'Efekt selhal.';

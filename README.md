@@ -1,6 +1,6 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.4 rozšiřuje nabídku na 22 efektů včetně nepravidelných koláží, inkoustu, reliéfu a kombinování vrstev. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.5 nabízí 42 efektů, včetně skutečného Pixel Sort, iterativního Feedback a Gray–Scott Reaction Diffusion. Rozhraní vychází z `gui/gui-navrh.png`.
 
 ## Spuštění
 
@@ -19,13 +19,14 @@ npm run build
 npm run test:browser # při běžícím dev serveru; jednou: npx playwright install chromium
 npm run test:features
 npm run test:catalog # produkční preview na portu 4173
+npm run test:expansion # dalších 20 efektů; stejné produkční preview
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 npm run desktop:build
 ```
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.4.0.exe` a `releases/RasterLab-0.4.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
+Připravené distribuční soubory této iterace: `releases/RasterLab-0.5.0.exe` a `releases/RasterLab-0.5.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -45,6 +46,7 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 - Voronoi Collage: až 32 nepravidelných buněk s posunem obsahu a průhlednými hranami.
 - Ink Bleed a Surface Relief: šíření tmavého inkoustu uvnitř obrazu a osvětlení luminanční výškové mapy.
 - Contour Atlas, Scanline Displace a Modulo Mix: jasové vrstevnice, seedované posuny řádků a modulo kombinace dvou vrstev.
+- Dalších 20 efektů v 0.5: [seznam a ovládání](docs/effects-0.5.md). Nová víceprůchodová API větev využívá dvě opakovaně používané GPU textury.
 - Automatické UI parametrů, vícenásobné instance, změna pořadí přetažením nebo šipkami, reset a Before/After bypass.
 - Více vstupů odkazem na jinou vrstvu; ochrana proti cyklům a izolace chyb efektu.
 - Uložení, Uložit jako a otevření verzovaného projektu včetně originálních obrázků.

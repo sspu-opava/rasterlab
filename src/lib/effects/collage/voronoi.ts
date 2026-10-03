@@ -7,14 +7,15 @@ export function generateVoronoiSites(count: number, seed: number): Float32Array 
   for (let index = 0; index < count; index++) sites.set([random(), random(), random() * 2 - 1, random() * 2 - 1], index * 4);
   return sites;
 }
-export const voronoiData: ShaderData = { declarations: 'uniform vec4 uSites[32];', create() {
+export function createVoronoiData(countParameter = 'cells'): ShaderData { return { declarations: 'uniform vec4 uSites[32];', create() {
   const sites = new Float32Array(128); let key = '';
   return { uniforms: { uSites: { value: sites, type: 'vec4<f32>', size: 32 } }, update(parameters) {
-    const next = `${parameters.cells}:${parameters.seed}`;
+    const next = `${parameters[countParameter]}:${parameters.seed}`;
     if (next === key) return;
-    key = next; sites.fill(0); sites.set(generateVoronoiSites(Number(parameters.cells), Number(parameters.seed)));
+    key = next; sites.fill(0); sites.set(generateVoronoiSites(Number(parameters[countParameter]), Number(parameters.seed)));
   } };
-} };
+} }; }
+export const voronoiData = createVoronoiData();
 /** Pixel-space distance keeps cells isotropic on rectangular documents. */
 export const voronoiGLSL = `
 int nearestSite(vec2 pixel, float count) {

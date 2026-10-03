@@ -1,4 +1,4 @@
-# Effect API 0.4
+# Effect API 0.5
 
 Nový efekt je samostatný modul. Definujte metadata a renderer, potom zavolejte `effectRegistry.register(definition)` v `src/lib/effects/index.ts`. UI si automaticky vytvoří nabídku a ovládací prvky. Neupravujte Svelte komponenty pro nový efekt.
 
@@ -15,7 +15,7 @@ interface EffectDefinition {
 }
 ```
 
-Renderer má `filter: Filter`, `update(parameters, context)` a `destroy()`. Runtime vlastní GPU objekty, nikdy je neukládejte do EffectInstance. Context má `width`, `height`, `mode: 'preview' | 'final'` a případný `secondary: Texture`. Filter musí fungovat v offscreen dokumentovém renderu, nikoliv ve viewportových souřadnicích. `update` opakovaně používá existující renderer. Pro jiný backend bude továrna moci vytvořit jiný Pixi program.
+Renderer má buď `filter: Filter`, nebo `render(input: Texture, output: RenderTexture, renderer: Renderer): void`; obě varianty mají `update(parameters, context)` a `destroy()`. Runtime vlastní GPU objekty, nikdy je neukládejte do EffectInstance. Context má `width`, `height`, `mode: 'preview' | 'final'` a případný `secondary: Texture`. Efekt musí fungovat v offscreen dokumentovém renderu, nikoliv ve viewportových souřadnicích. `update` opakovaně používá existující renderer. Pro jiný backend bude továrna moci vytvořit jiný Pixi program.
 
 Parametr deklaruje `id`, `label`, `type`, `default`, případně `min`, `max`, `step` a `options: {value,label}[]`. Podporované UI/validační typy jsou float, integer, boolean, select, color (`#rrggbb`), seed a layer (reference ID nebo null). Numeric validace odmítá NaN/Infinity, omezuje meze a zaokrouhluje integer/seed. `validateParameters` zahazuje nedefinované klíče a doplní výchozí hodnoty.
 
@@ -53,6 +53,14 @@ Seed má tlačítko Randomize používající crypto pouze při uživatelské op
 Novou sadu ověřuje `npm run test:catalog` proti produkčnímu preview na portu 4173 se stejnou CSP jako desktop.
 
 `collage/voronoi.ts` poskytuje další sdílený generátor: normalizované pozice buněk a vektory posunu do `uSites[32]`. GLSL helper vyhledává nejbližší centrum v pixelech dokumentu a počítá vzdálenost od skutečných bisektorů buněk, takže šířka mezer zůstává v pixelech i u obdélníkového dokumentu. Modulo Mix používá stejný secondary vstup jako boolean efekty; normalizovaný součet kanálů se zalamuje operací `mod(sum, divisor) / divisor * gain`.
+
+## Více průchodů
+
+`core/multipass.ts` poskytuje `multipassEffect(metadata, {initialize, step, finish, passes})`. Tři stage jsou interní `shaderEffect` definice, do registry se přidává pouze vnější definice. Metadata parametrů stage obsahují vše potřebné pro jejich shadery; interní `phase` u Pixel Sort není v UI vnějšího efektu. Každý krok dostává číslo průchodu v `phase` a originální vstup v `uSecondary`. Helper nepotřebuje externí secondary vrstvu.
+
+Při každém zneplatnění uzlu začne initialize z původního vstupu. Výsledek tedy nezávisí na počtu předchozích vykreslení editoru. Helper používá dva vlastní RenderTexture objekty, střídá je jako vstup/výstup a finish zapisuje do výstupu přiděleného GraphRendererem. Textury uvolní při změně rozměrů nebo destroy; zdroj ani vstupní texture nesmí měnit. Počet průchodů má hard limit 256 a konkrétní definice přísnější metadata. Celý efekt je jeden uzel grafu a jedna serializovaná instance.
+
+Pixel Sort používá počet průchodů rovný velikosti intervalu a skutečnou odd-even transposition sort. Feedback opakovaně transformuje předchozí výstup. Reaction Diffusion má seedovanou inicializaci U/V, čtyřsousední laplacián a Gray–Scott reakční člen. Nové efekty mají pixelové integrační testy v `scripts/expansion.mjs`.
 
 ## Testování a chyby
 

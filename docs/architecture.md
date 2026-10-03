@@ -1,4 +1,4 @@
-# Architektura RasterLabu 0.4
+# Architektura RasterLabu 0.5
 
 ```text
 Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
@@ -27,6 +27,8 @@ DocumentRenderEngine vlastní Application a editorový viewport. GraphRenderer v
 GraphRenderer znovu počítá jen dirty uzly a následníky. Čisté source/efektové textury se používají z cache. RenderTargetPool opakovaně používá uvolněné textury; velikost volného poolu je omezená. Shader uniformy se aktualizují bez nové alokace render targetu při každém pohybu slideru. Přepnutí projektu/rozměrů/revision uvolní cache.
 
 Export má samostatný final GraphRenderer bez editorového viewportu, checkerboardu a hranice. Preview/final nyní mají stejné rozlišení. Rozměry a režim jsou v EffectRenderContext; budoucí nižší preview rozlišení se přidá v renderovací vrstvě. WebGL adapter používá GLSL 3; backendová výměna nevyžaduje změnu dokumentu nebo UI metadat.
+
+Víceprůchodové efekty používají alternativní `EffectRenderer.render` místo jediného filtru. GraphRenderer jim předá nezměněný vstup a vlastní výstupní target. Multipass runtime udržuje pouze dva pomocné targety pro střídání průchodů. Cache a invalidace nadále fungují na úrovni celého efektového uzlu. Initialize se spustí pro každé nové vyhodnocení, takže export ani undo nezdědí historii simulace.
 
 ## Operační systém
 

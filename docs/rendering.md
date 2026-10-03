@@ -1,4 +1,4 @@
-# Vykreslování 0.4
+# Vykreslování 0.5
 
 DocumentRenderEngine inicializuje PixiJS 8 Application s `preference: 'webgl'`. Ticker je vypnutý a UI změny se slučují přes requestAnimationFrame. Editorový canvas má maximálně 2× density; rozměry dokumentu jsou samostatné.
 
@@ -17,3 +17,9 @@ Tauri CSP zůstává bez unsafe-eval. `pixi.js/unsafe-eval` je Pixi modul použ�
 Koláže předpočítávají při změně seedu nebo členění bijektivní permutaci zdrojových fragmentů (nejvýše 64). Shader provádí zpětné mapování v dokumentových souřadnicích; transformované dlaždice ořezává na jejich buňku, mezery jsou průhledné. Crumple předpočítává až 32 orientovaných záhybů a v shaderu analyticky vyhodnotí jejich výšku a gradient. Gradient slouží pro displacement i světla/stíny. Data map zůstávají v runtime a nejsou součástí projektového JSON. Preview a export je nezávisle obnovují ze stejných parametrů.
 
 Voronoi Collage používá nejvýše 32 seedovaných center; dvojice center definují bisektory pro přesnou šířku mezer. Ink Bleed vyhodnocuje 24 radiálních vzorků inkoustu s vláknitou nepravidelností. Zachovává alpha zdrojového papíru a šíří tmavé kanály jen uvnitř něj; nejde o iterativní fyzikální difuzi. Surface Relief vyhodnocuje symetrické derivace luminance, u průhledných okrajů použije jas aktuálního bodu. Contour Atlas vyhlazuje vrstevnice derivací `fwidth`, Scanline Displace posouvá skupiny řádků v dokumentových pixelech. Všechny tyto efekty jsou jednopassové, bez zpětné vazby.
+
+## Iterace a řazení
+
+Víceprůchodový efekt dostává vlastní output target a udržuje dva pomocné RenderTexture objekty. Na každé zneplatnění začíná initialize z původního vstupu, poté střídá read/write targety a finish zapisuje výsledek. Vstupní textury se nikdy nepřepisují. Změna rozměrů a destroy uvolní pomocné targety. Cache čistých uzlů a export používají tuto větev stejně jako jednotlivé filtry.
+
+Pixel Sort provádí odd-even transposition sorting, jeden sousední compare/swap na průchod. Parametr interval 2–64 určuje délku segmentu i počet průchodů; threshold a nulová alpha tvoří bariéry. Feedback transformuje předchozí obraz a míchá jej s původním vstupem. Reaction Diffusion aktualizuje U/V přes čtyřsousední laplacián a Gray–Scott reakční člen; používá periodické hranice a standardní RGBA8 targety. Žádný z těchto algoritmů neakumuluje stav napříč změnami sliderů nebo exporty.

@@ -1,9 +1,9 @@
-# Ověření RasterLabu 0.4
+# Ověření RasterLabu 0.5
 
 Windows, 3. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro `x86_64-pc-windows-msvc`, Visual Studio 2019 Community C++ tools, WebView2.
 
 - TypeScript/Svelte check: 0 chyb a 0 varování.
-- Unit tests: 26 testů modelu, viewportu, grafu, registry, parametrů, seedovaného PRNG, boolean/modulo operací, historie, serializace a procedurálních map. Mapy kontrolují bijekci shuffle, stabilitu seedu, změny rozměrů, normalizované záhyby a Voronoi centra/vektory.
+- Unit tests: 28 testů modelu, viewportu, grafu, registry, parametrů, seedovaného PRNG, boolean/modulo operací, historie, serializace a procedurálních map. Mapy kontrolují bijekci shuffle, stabilitu seedu, změny rozměrů, normalizované záhyby a Voronoi centra/vektory. Nové testy ověřují 42 jedinečných definic s validními defaulty a bijektivní částečné promíchání Cut-Up.
 - Rust: 2 testy skutečného save/load/overwrite a odmítnutí traversal/future version.
 - Frontend production build úspěšný.
 - Browser smoke: WebGL, PNG/JPEG/WebP import, opacity/visibility porovnané přes canvas snímky, blend modes, zoom, pan, lock, rozměry a neplatný bitmapový import.
@@ -12,11 +12,13 @@ Windows, 3. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro 
 - Produkční browser testy aplikují CSP převzatou z Tauri konfigurace. Shader helper nevyžaduje eval.
 - Ověřeno přeskupení efektů přetažením i šipkou a klávesové Ctrl+Z / Ctrl+Shift+Z; undo obnoví původní pořadí i výsledné pixely.
 - Catalog test: 12 experimentálních GPU efektů (sady 0.3 a 0.4), determinismus a změna seedu, bypass, undo seedu, nulové transformace a síla, 64 dlaždic, 32 Voronoi buněk a jediná buňka bez vnitřních hran. Průhledné mezery v PNG, nový smíšený stack i dvouvstupový Modulo Mix po save/load mají shodné exportované bytes. Bit Plane Extractor kontroluje přesné hodnoty bitů 0 a 1 kanálu 0xaa i invert. Modulo Mix kontroluje známé RGB výstupy s tolerancí jednoho 8bit kroku a luminanční režim.
-- Desktop release build vytvořil EXE a NSIS instalátor 0.4.0. Distribuční kopie jsou v `releases/`.
+- Expansion test: všech 20 nových GPU modulů, determinismus a změna seedu, undo a bypass, identity při nulové síle včetně alpha. Ověřuje přesné AND/OR/NAND/NOR/XNOR a bit-plane výstupy, Pixel Sort vzestupně/sestupně i s prahovými bariérami a svislým směrem, akumulaci Feedback po 2 a 3 průchodech a stacionární Gray–Scott stav. Projekt obsahující všech 20 efektů zachová parametry i výsledné pixely. PNG/JPEG/WebP mají rozměr dokumentu, multipass export nezávisí na viewportu.
+- Finální produkční build: všechny tři GPU testovací skripty a základní browser smoke prošly s CSP Tauri, celkem pokrývají 42 efektů. TypeScript a Vite build nemají chyby ani varování; Svelte runtime je v samostatném chunku.
+- Desktop release build vytvořil EXE a NSIS instalátor 0.5.0. Distribuční kopie jsou v `releases/`.
 - Nativní UI kontrolu blokuje nedostupné připojení computer-use: `Computer Use native pipe is unavailable` / os error 2. Start EXE a nativní dialogy této verze nebyly automaticky ověřeny. Browser testy běží proti produkčnímu buildu s CSP desktopové aplikace.
 - `npm audit`: 0 známých zranitelností.
 
-Snímky: `test-results/foundation-empty.png`, `foundation-demo.png`, `effects-projects.png`, `catalog-effects.png`.
+Snímky: `test-results/foundation-empty.png`, `foundation-demo.png`, `effects-projects.png`, `catalog-effects.png`, `expansion-stack.png`, `expansion-sheet.png`. Contact sheet obsahuje skutečné exporty všech 20 nových modulů.
 
 Vývojový port 1420 byl v tomto systému rezervovaný Windows; Vite/Tauri používají 5173. Nově instalovaný Rust vyžaduje nový terminál nebo aktualizaci PATH aktuálního procesu.
 
