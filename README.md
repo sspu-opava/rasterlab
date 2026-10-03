@@ -1,6 +1,6 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.6 nabízí 48 efektů a pokrývá všechny položky `katalog.md`, včetně skutečného Pixel Sort, iterativního Feedback, Channel Algebra a Cellular Growth. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.7 nabízí 48 efektů, knihovnu presetů, kopírování stacků, vyhledávání, oblíbené efekty a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
 
 ## Spuštění
 
@@ -21,13 +21,14 @@ npm run test:features
 npm run test:catalog # produkční preview na portu 4173
 npm run test:expansion # dalších 20 efektů; stejné produkční preview
 npm run test:remaining # posledních 6 katalogových efektů; stejné preview
+npm run test:workflow # presety, kopírování, historie a IndexedDB obnova
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 npm run desktop:build
 ```
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.6.0.exe` a `releases/RasterLab-0.6.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
+Připravené distribuční soubory této iterace: `releases/RasterLab-0.7.0.exe` a `releases/RasterLab-0.7.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -49,6 +50,10 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 - Contour Atlas, Scanline Displace a Modulo Mix: jasové vrstevnice, seedované posuny řádků a modulo kombinace dvou vrstev.
 - Dalších 20 efektů v 0.5: [seznam a ovládání](docs/effects-0.5.md). Nová víceprůchodová API větev využívá dvě opakovaně používané GPU textury.
 - Zbývajících šest v 0.6: Channel Algebra, Recursive Collage, Echo Frames, Cellular Growth, Databend a Signal Collapse; [ovládání a příklady](docs/effects-0.6.md).
+- Hledání efektů podle názvu, kategorie i popisu a trvale uložené oblíbené efekty.
+- Duplikace efektu a kopírování celého stacku mezi vrstvami s novým přiřazením vstupů a jediným undo.
+- Knihovna až 100 uživatelských presetů, deset ukázkových postupů, import/export `.preset.json`; [návod](docs/workflow-0.7.md).
+- Zotavovací kopie po 15 sekundách nečinnosti včetně originálních obrázků, nabídka obnovy po restartu a oddělený stav ručního uložení.
 - Automatické UI parametrů, vícenásobné instance, změna pořadí přetažením nebo šipkami, reset a Before/After bypass.
 - Více vstupů odkazem na jinou vrstvu; ochrana proti cyklům a izolace chyb efektu.
 - Uložení, Uložit jako a otevření verzovaného projektu včetně originálních obrázků.
@@ -74,6 +79,10 @@ Desktop ukládá zvolený `.json` a vedle něj adresář `assets/`. Přenášejt
 
 Historie uchovává nejvýše 200 příkazů, nepersistuje se v projektu a při otevření/novém dokumentu se resetuje. Neznámý nebo selhávající efekt zachová v náhledu svůj vstup a zobrazí diagnostiku; export se při chybě aktivního efektu přeruší.
 
+Presety a oblíbené efekty se ukládají místně do nastavení aplikace. Zotavovací kopie je v IndexedDB úložišti WebView/prohlížeče; nemaže originály a nepřepisuje ručně uložený soubor. Aplikace uchovává jednu poslední kopii pro dané úložiště. Obnovený dokument zůstává neuložený až do Ctrl+S. Vymazání dat aplikace odstraní i místní nastavení a kopii obnovy.
+
 Další iterace: UI skupin, masky a generátorové vrstvy. Generativní efekty nyní pracují s bitmapovou vrstvou; samostatné generátorové vrstvy ještě nejsou implementovány. Vícevstupové efekty používají dvě vrstvy. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
 
 Podrobnosti: [architektura](docs/architecture.md), [Effect API](docs/effect-api.md), [projektový formát](docs/project-format.md), [vykreslování](docs/rendering.md), [ověření](docs/validation.md).
+
+Další rozvoj: [návrh vylepšení, priority a doporučené etapy](docs/navrh-vylepseni.md).

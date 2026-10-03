@@ -1,13 +1,16 @@
 <script lang="ts">
   import { ImagePlus, Search, Image, Plus, FolderOpen } from '@lucide/svelte';
   import { assetStore, importing, addAssetLayer } from '../../lib/editor/store';
+  import PresetsPanel from './PresetsPanel.svelte';
+  let tab = $state<'assets' | 'presets'>('assets');
   let { onimport }: { onimport: () => void } = $props();
   let search = $state('');
   let filtered = $derived($assetStore.filter(asset => asset.name.toLowerCase().includes(search.toLowerCase())));
 </script>
 
 <aside class="assets-panel panel" aria-label="Knihovna obrázků">
-  <div class="panel-tabs"><span class="selected-tab">Assets <span class="count">{$assetStore.length}</span></span><span class="future-tab" title="Připraveno pro další fázi">Generators</span><span class="future-tab" title="Připraveno pro další fázi">Presets</span></div>
+  <div class="panel-tabs"><button class:selected-tab={tab === 'assets'} onclick={() => tab = 'assets'}>Assets <span class="count">{$assetStore.length}</span></button><span class="future-tab" title="Připraveno pro další fázi">Generators</span><button class:selected-tab={tab === 'presets'} onclick={() => tab = 'presets'}>Presets</button></div>
+  {#if tab === 'assets'}
   <div class="assets-tools">
     <button class="primary-button import-button" onclick={onimport} disabled={$importing}><ImagePlus size={17}/> {$importing ? 'Importuji…' : 'Importovat obrázky'}</button>
     <label class="search-box"><Search size={16}/><input bind:value={search} placeholder="Hledat v assets…" aria-label="Hledat obrázky"/></label>
@@ -27,5 +30,6 @@
       {#if filtered.length === 0}<p class="search-empty">Žádné odpovídající obrázky.</p>{/if}
     {/if}
   </div>
+  {:else}<PresetsPanel/>{/if}
   <div class="panel-footer"><Image size={14}/><span>Originály zůstávají nedotčené</span></div>
 </aside>

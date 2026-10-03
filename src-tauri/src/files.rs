@@ -210,6 +210,31 @@ pub fn write_export(path: String, bytes: Vec<u8>) -> Result<(), String> {
     atomic_write(destination, &bytes)
 }
 
+#[tauri::command]
+pub fn write_preset(path: String, preset_json: String) -> Result<(), String> {
+    let destination = Path::new(&path);
+    if !destination
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.eq_ignore_ascii_case("json"))
+        || preset_json.len() > 1024 * 1024
+    {
+        return Err("Neplatná cesta nebo velikost presetu.".into());
+    }
+    let value: serde_json::Value =
+        serde_json::from_str(&preset_json).map_err(|_| "Neplatný JSON presetu.".to_string())?;
+    let effects = value.get("effects").and_then(|items| items.as_array());
+    let roles = value.get("roles").and_then(|items| items.as_array());
+    if value.get("format").and_then(|item| item.as_str()) != Some("rasterlab-preset")
+        || value.get("version").and_then(|item| item.as_u64()) != Some(1)
+        || !effects.is_some_and(|items| !items.is_empty() && items.len() <= 32)
+        || !roles.is_some_and(|items| items.len() <= 32)
+    {
+        return Err("Nepodporovaný formát presetu.".into());
+    }
+    atomic_write(destination, preset_json.as_bytes())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -249,6 +274,38 @@ mod tests {
         let loaded = load_project(path).unwrap();
         assert_eq!(loaded.project_json, json);
         assert_eq!(loaded.assets[0].bytes, vec![1, 2, 3]);
+        fs::remove_dir_all(directory).unwrap();
+    }
+    #[test]
+    fn preset_write_overwrite_and_rejection_preserve_original() {
+        let directory = std::env::temp_dir().join(format!(
+            "rasterlab-preset-test-{}-{}",
+            std::process::id(),
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        let path = directory
+            .join("experiment.preset.json")
+            .to_string_lossy()
+            .into_owned();
+        let valid = r#"{"format":"rasterlab-preset","version":1,"effects":[{}],"roles":[]}"#;
+        write_preset(path.clone(), valid.into()).unwrap();
+        write_preset(path.clone(), valid.into()).unwrap();
+        assert!(write_preset(
+            path.clone(),
+            valid.replace("\"version\":1", "\"version\":2")
+        )
+        .is_err());
+        assert!(write_preset(
+            directory.join("bad.exe").to_string_lossy().into_owned(),
+            valid.into()
+        )
+        .is_err());
+        assert!(write_preset(path.clone(), " ".repeat(1024 * 1024 + 1)).is_err());
+        assert_eq!(fs::read_to_string(path).unwrap(), valid);
         fs::remove_dir_all(directory).unwrap();
     }
 }

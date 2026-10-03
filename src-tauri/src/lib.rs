@@ -5,7 +5,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             files::save_project,
             files::load_project,
-            files::write_export
+            files::write_export,
+            files::write_preset
         ])
         .run(tauri::generate_context!())
         .expect("error while running RasterLab");

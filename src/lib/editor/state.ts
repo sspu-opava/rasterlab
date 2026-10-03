@@ -11,6 +11,8 @@ import { ProjectSerializer } from '../project/ProjectSerializer';
 import { decodeProject, pickProject, saveProject } from '../project/files';
 import { exportDocument } from '../project/export';
 import type { ExportFormat } from '../project/export';
+import { createPreset, instantiatePreset, type EffectPreset } from '../presets/presets';
+import { readRecovery, writeRecovery, clearRecovery, recoverySnapshot, type RecoverySnapshot } from '../project/recovery';
 
 export const assets = new AssetManager();
 export const documentStore = writable(createDocument());
@@ -22,6 +24,8 @@ export const status = writable('Připraveno');
 export const errorMessage = writable('');
 export const importing = writable(false);
 export const busy = writable(false);
+export const recoverableProject = writable<RecoverySnapshot | null>(null);
+export const recoveryStatus = writable('');
 export const projectPath = writable<string | null>(null);
 export const historyState = writable({ canUndo: false, canRedo: false, dirty: false, undoLabel: '', redoLabel: '' });
 export const tool = writable<'select' | 'pan'>('select');
@@ -128,16 +132,34 @@ export function setEffectInput(layerId: string, id: string, inputId: string, ref
 export function resetEffect(layerId: string, id: string): void {
   editEffects(layerId, effects => effects.map(effect => { const definition = effectRegistry.get(effect.effectId); return effect.id === id && definition ? { ...effect, parameters: validateParameters(definition, {}) } : effect; }), 'Resetovat efekt');
 }
+export function duplicateEffect(layerId: string, id: string): void {
+  const layer = get(documentStore).layers.find(item => item.id === layerId), original = layer?.effects.find(effect => effect.id === id);
+  if (!layer || layer.locked || !original || get(busy)) return;
+  if (layer.effects.length >= 32) { reportError(new Error('Vrstva může obsahovat nejvýše 32 efektů.')); return; }
+  const copy = { ...original, id: crypto.randomUUID(), parameters: { ...original.parameters }, inputs: { ...original.inputs } };
+  editEffects(layerId, effects => effects.flatMap(effect => effect.id === id ? [effect, copy] : [effect]), 'Duplikovat efekt'); selectedEffectId.set(copy.id);
+}
+export function capturePreset(layerId: string, name: string, effectId?: string): EffectPreset {
+  const document = get(documentStore), layer = document.layers.find(item => item.id === layerId);
+  if (!layer) throw new Error('Vyberte vrstvu.');
+  return createPreset(name, effectId ? layer.effects.filter(effect => effect.id === effectId) : layer.effects, document.layers);
+}
+export function applyPreset(layerId: string, preset: EffectPreset, bindings: Record<string, string>, replace = false): void {
+  if (get(busy) || get(importing)) throw new Error('Počkejte na dokončení operace.');
+  const result = instantiatePreset(preset, get(documentStore).layers, layerId, bindings, replace);
+  editEffects(layerId, () => result, replace ? 'Nahradit stack presetem' : 'Použít preset');
+  selectedEffectId.set(result.at(-1)?.id ?? null); status.set(`Použit preset: ${preset.name}`);
+}
 export async function saveCurrentProject(saveAs = false): Promise<void> {
   if (get(busy) || get(importing)) return; busy.set(true); errorMessage.set('');
   const snapshot = get(documentStore);
   try {
     const result = await saveProject(ProjectSerializer.create(snapshot, assets), assets, get(projectPath), saveAs);
-    if (result) { projectPath.set(result.path); history.markSaved(snapshot); status.set('Projekt uložen'); }
+    if (result) { projectPath.set(result.path); history.markSaved(snapshot); if (!get(recoverableProject)) await recoveryOperation(clearRecovery).catch(() => {}); status.set('Projekt uložen'); }
   } catch (error) { reportError(error); } finally { busy.set(false); }
 }
-export async function loadProjectJson(json: string, path: string | null = null, nativeAssets: { id: string; bytes: number[] }[] = []): Promise<void> {
-  const loaded = await decodeProject(json, nativeAssets);
+export async function loadProjectJson(json: string, path: string | null = null, nativeAssets: { id: string; bytes: number[] }[] = [], embeddedBlobs: Record<string, Blob> = {}): Promise<void> {
+  const loaded = await decodeProject(json, nativeAssets, embeddedBlobs);
   assets.replaceWith(loaded.assets); assetStore.set(assets.list()); history.reset(loaded.project.document);
   selectedEffectId.set(null); projectPath.set(path); errorMessage.set(''); status.set('Projekt otevřen'); requestView('fit');
 }
@@ -150,4 +172,41 @@ export async function exportCurrentDocument(format: ExportFormat, quality: numbe
   if (get(busy) || get(importing)) return false; busy.set(true); errorMessage.set('');
   try { const result = await exportDocument(get(documentStore), format, quality); if (result) status.set(`Exportováno: ${format.toUpperCase()}`); return result; }
   catch (error) { reportError(error); return false; } finally { busy.set(false); }
+}
+
+let recoveryQueue = Promise.resolve();
+function recoveryOperation(action: () => Promise<void>): Promise<void> {
+  const result = recoveryQueue.then(action); recoveryQueue = result.catch(error => recoveryStatus.set(`Obnova: ${error instanceof Error ? error.message : 'úložiště není dostupné'}`)); return result;
+}
+/** Started once by the app; pending startup recovery is never overwritten by a blank document. */
+export function startRecovery(): () => void {
+  let mounted = true, timer: ReturnType<typeof setTimeout> | undefined;
+  const unsubscribers: (() => void)[] = [];
+  void readRecovery().then(record => {
+    if (!mounted) return; recoverableProject.set(record);
+    const schedule = () => {
+      clearTimeout(timer);
+      if (get(recoverableProject) || get(busy) || get(importing)) return;
+      const document = get(documentStore), dirty = get(historyState).dirty;
+      timer = setTimeout(() => {
+        if (!mounted || get(recoverableProject) || get(busy) || get(importing) || get(documentStore) !== document) return;
+        if (!dirty) { void recoveryOperation(clearRecovery).catch(() => {}); recoveryStatus.set(''); return; }
+        try {
+          const snapshot = recoverySnapshot(document, assets, get(projectPath));
+          recoveryStatus.set('Ukládám kopii obnovy…');
+          void recoveryOperation(async () => { await writeRecovery(snapshot); if (get(documentStore) === document) recoveryStatus.set(`Kopie obnovy: ${new Date(snapshot.writtenAt).toLocaleTimeString()}`); }).catch(() => {});
+        } catch (error) { recoveryStatus.set(`Obnova: ${error instanceof Error ? error.message : 'chyba kopie'}`); }
+      }, dirty ? 15000 : 0);
+    };
+    for (const store of [documentStore, historyState, busy, importing, recoverableProject, projectPath]) unsubscribers.push(store.subscribe(schedule));
+  }).catch(error => recoveryStatus.set(`Obnova: ${error instanceof Error ? error.message : 'úložiště není dostupné'}`));
+  return () => { mounted = false; clearTimeout(timer); unsubscribers.forEach(unsubscribe => unsubscribe()); };
+}
+export async function discardRecovery(): Promise<void> { await recoveryOperation(clearRecovery); recoverableProject.set(null); recoveryStatus.set(''); }
+export async function restoreRecovery(): Promise<void> {
+  const record = get(recoverableProject); if (!record || get(busy) || get(importing)) return;
+  busy.set(true);
+  try { await loadProjectJson(ProjectSerializer.stringify(record.project), record.path, [], record.blobs); history.markUnsaved(); recoverableProject.set(null); status.set('Obnoven rozpracovaný projekt · uložte jej'); }
+  catch (error) { reportError(error); }
+  finally { busy.set(false); }
 }

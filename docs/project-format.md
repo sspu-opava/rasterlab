@@ -28,3 +28,5 @@ Rust přijímá pouze validované cesty `assets/<ID>.<extension>` odpovídajíc�
 Ctrl+S používá poslední desktopovou cestu; Ctrl+Shift+S zobrazí výběr jiné cesty. Browser každý save stáhne nový portable JSON. Uložený immutable model určuje dirty flag. Otevření a nový dokument resetují historii. Native close a otevření projektu vyžadují rozhodnutí o skutečně neuložených změnách.
 
 Export je oddělen od projektu: full-resolution PNG/JPEG/WebP, kvalita JPEG/WebP, bílé podložení průhlednosti JPEG. Export neobsahuje editorový checkerboard, hranici, zoom ani pan.
+
+Od verze 0.7 existují dva další oddělené formáty: `.preset.json` s obálkou `rasterlab-preset`, verze 1, a interní IndexedDB kopie `rasterlab-recovery`, verze 1. Preset neobsahuje assety; kopie obnovy ukládá projekt verze 1 spolu s původními Bloby v jedné transakci. Žádný z těchto mechanismů nemění formát ručně ukládaného projektu. Podrobnosti v [návodu 0.7](workflow-0.7.md).

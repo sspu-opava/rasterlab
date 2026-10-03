@@ -28,12 +28,12 @@ export async function pickProject(): Promise<{ json: string; path: string; asset
   return { json: loaded.projectJson, path, assets: loaded.assets };
 }
 /** Load into a temporary manager; commit only when every bitmap decodes and matches its metadata. */
-export async function decodeProject(json: string, nativeAssets: NativeAsset[] = []): Promise<{ project: ProjectFile; assets: AssetManager }> {
+export async function decodeProject(json: string, nativeAssets: NativeAsset[] = [], embeddedBlobs: Record<string, Blob> = {}): Promise<{ project: ProjectFile; assets: AssetManager }> {
   const project = ProjectDeserializer.parse(json); const manager = new AssetManager();
   try {
     for (const asset of project.assets) {
       const native = nativeAssets.find(value => value.id === asset.id);
-      const blob = native ? new Blob([new Uint8Array(native.bytes)], { type: asset.mimeType }) : asset.dataUrl ? new Blob([Uint8Array.from(atob(asset.dataUrl.split(',')[1]), character => character.charCodeAt(0))], { type: asset.mimeType }) : null;
+      const blob = embeddedBlobs[asset.id] ?? (native ? new Blob([new Uint8Array(native.bytes)], { type: asset.mimeType }) : asset.dataUrl ? new Blob([Uint8Array.from(atob(asset.dataUrl.split(',')[1]), character => character.charCodeAt(0))], { type: asset.mimeType }) : null);
       if (!blob) throw new Error('Projekt nemá vložené obrázky. Otevřete jej v desktopové aplikaci se složkou assets.');
       const record = await manager.import(new File([blob], asset.name, { type: asset.mimeType }), asset.id);
       if (record.width !== asset.width || record.height !== asset.height) throw new Error(`Rozměry obrázku ${asset.name} neodpovídají manifestu.`);

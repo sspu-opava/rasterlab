@@ -1,4 +1,4 @@
-# Architektura RasterLabu 0.6
+# Architektura RasterLabu 0.7
 
 ```text
 Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
@@ -32,7 +32,11 @@ Víceprůchodové efekty používají alternativní `EffectRenderer.render` mís
 
 ## Operační systém
 
-Rust je omezen na filesystem: `save_project`, `load_project`, `write_export`. Výběr cest řeší oficiální dialog plugin. Assets mají validované relativní cesty, soubory se zapisují atomicky a manifest poslední. UI nedostává obecný filesystem plugin. Podrobnosti jsou v [projektovém formátu](project-format.md).
+`presets/presets.ts` odděluje verzovaný datový formát od UI. Zachytí instance jako šablony bez UUID, společné vstupní reference převede na role a před použitím ověří celý kandidátní graf. Editor aplikuje výsledek jedním příkazem historie. `presets/library.ts` vlastní místní nastavení oblíbených a uživatelských presetů; ukázkové recepty jsou metadata v `presets/builtins.ts`.
+
+`project/recovery.ts` ukládá manifest a originální Bloby v jedné IndexedDB transakci. Editor plánuje zápis po nečinnosti, serializuje operace úložiště a odděluje recovery stav od `CommandHistory.saved`. Pending kopie z předchozího startu se nepřepisuje, dokud uživatel nerozhodne. Obnova využívá dočasný AssetManager a běžnou projektovou validaci; historie se resetuje a následně označí za neuloženou.
+
+Rust je omezen na filesystem: `save_project`, `load_project`, `write_export` a `write_preset`. Výběr cest řeší oficiální dialog plugin. Assets mají validované relativní cesty, soubory se zapisují atomicky a manifest poslední. Export presetu kontroluje příponu JSON, velikost a formátovou obálku; plnou parametrovou validaci zajišťuje frontend. UI nedostává obecný filesystem plugin. Podrobnosti jsou v [projektovém formátu](project-format.md).
 
 ## Rozsah
 
