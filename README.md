@@ -1,6 +1,6 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.7 nabízí 48 efektů, knihovnu presetů, kopírování stacků, vyhledávání, oblíbené efekty a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.8 nabízí 48 efektů, osm samostatných generátorů, vnořené skupiny, knihovnu presetů a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
 
 ## Spuštění
 
@@ -22,13 +22,14 @@ npm run test:catalog # produkční preview na portu 4173
 npm run test:expansion # dalších 20 efektů; stejné produkční preview
 npm run test:remaining # posledních 6 katalogových efektů; stejné preview
 npm run test:workflow # presety, kopírování, historie a IndexedDB obnova
+npm run test:composition # osm generátorů, vnořené skupiny a projekty v2
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 npm run desktop:build
 ```
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.7.0.exe` a `releases/RasterLab-0.7.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
+Připravené distribuční soubory této iterace: `releases/RasterLab-0.8.0.exe` a `releases/RasterLab-0.8.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -40,6 +41,8 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 - Import PNG, JPEG a WebP přes výběr souborů i drag & drop; vícenásobný import.
 - Assets se identifikují UUID; originální soubor se nemění. Kliknutí na asset přidá další vrstvu.
 - Výběr, viditelnost, zámek, krytí, blend mode, pořadí a transformace rastrových vrstev.
+- Noise, Checker, Lines, Dots, FBM Noise, Voronoi, Interference a Radial Field jako samostatné vrstvy bez importu bitmapy.
+- Strom vrstev, sbalování a vnořování skupin, přesuny vrstev dovnitř i ven, efekty a transformace celé skupiny; [návod 0.8](docs/composition-0.8.md).
 - Demo experiment generovaný lokálně, bez přístupu k síti.
 - Grayscale, Threshold, Posterize, Noise, RGB Shift, Wave, XOR, AND, OR a NAND jako samostatné GPU moduly.
 - Crumple: procedurální záhyby deformující obraz, se světlem a stínem.
@@ -81,7 +84,7 @@ Historie uchovává nejvýše 200 příkazů, nepersistuje se v projektu a při 
 
 Presety a oblíbené efekty se ukládají místně do nastavení aplikace. Zotavovací kopie je v IndexedDB úložišti WebView/prohlížeče; nemaže originály a nepřepisuje ručně uložený soubor. Aplikace uchovává jednu poslední kopii pro dané úložiště. Obnovený dokument zůstává neuložený až do Ctrl+S. Vymazání dat aplikace odstraní i místní nastavení a kopii obnovy.
 
-Další iterace: UI skupin, masky a generátorové vrstvy. Generativní efekty nyní pracují s bitmapovou vrstvou; samostatné generátorové vrstvy ještě nejsou implementovány. Vícevstupové efekty používají dvě vrstvy. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
+Projekty verze 1 se při otevření převedou na verzi 2; nové projekty s generátory vyžadují RasterLab 0.8. Další iterace: masky, vícečetný výběr a rozšířená správa skupin. Vícevstupové efekty používají dvě vrstvy. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
 
 Podrobnosti: [architektura](docs/architecture.md), [Effect API](docs/effect-api.md), [projektový formát](docs/project-format.md), [vykreslování](docs/rendering.md), [ověření](docs/validation.md).
 

@@ -1,10 +1,14 @@
-# Vykreslování 0.6
+# Vykreslování 0.8
 
 DocumentRenderEngine inicializuje PixiJS 8 Application s `preference: 'webgl'`. Ticker je vypnutý a UI změny se slučují přes requestAnimationFrame. Editorový canvas má maximálně 2× density; rozměry dokumentu jsou samostatné.
 
 GraphRenderer vyhodnocuje graf v document-space RenderTexture při resolution 1. Raster source obsahuje originál s transformací. Každý efekt má vlastní output target a persistentní runtime. Source a čisté efekty se z cache znovu nepočítají při změně následného efektu. Sekundární vstupy vytvářejí downstream závislosti; cykly hlídá model i evaluator. Skupinový source skládá child outputs, výsledný dokument skládá layers s jejich opacity/visibility/blend a background.
 
 Cache se resetuje při změně ID/rozměrů dokumentu, render mode nebo asset revision. Odstraněné uzly vracejí textury RenderTargetPoolu, který drží nejvýše osm volných targetů. Při změně slideru se znovu používají render targety a uniformy. Pixi filter intermediates dále používají vlastní interní pool. GPU runtime se uvolní při změně dokumentu nebo zániku rendereru.
+
+Generátor má samostatný dokumentový target a persistentní runtime spravovaný podle UUID vrstvy. Jeho shader vytváří procedurální obraz bez importovaného assetu; transformovaný obraz vstoupí do source uzlu a běžného stacku. FBM a Voronoi sdílejí efektové runtime s plnou procedurální silou, Interference a Radial Field sdílejí analytické GLSL funkce s odpovídajícími efekty. Parametry a seed určují signaturu uzlu. Při odstranění vrstvy nebo změně dokumentu se uvolní i generator runtime.
+
+Skupina skládá děti v pořadí modelu s jejich viditelností, krytím a blendem. Následně se aplikuje transformace skupiny a její stack; krytí/blend skupiny se použije při složení s ostatními vrstvami. Souřadnice dětí jsou místní vůči předkům. Každá mezitextura má rozměr dokumentu a ořezává se na jeho hranice. Vstupní reference na dítě používá jeho vlastní post-effect výstup před transformací předků; není to výřez finálního dokumentu. Reference na skrytého sourozence je povolená, reference dítěte na jeho předka by tvořila cyklus a je odmítnuta.
 
 Editor zobrazuje finální document texture na checkerboardu, transformovanou pouze viewportovým containerem. Hranice má konstantní tloušťku podle zoomu. Proto render obsahuje celé dokumentové rozlišení a zůstává nezávislý na okně a poloze kamery.
 

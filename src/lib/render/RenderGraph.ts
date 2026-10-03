@@ -14,6 +14,7 @@ export class RenderGraph {
     const visit = (layer: LayerNode): string => {
       const sourceId = `${layer.id}:source`;
       const dependencies = layer.type === 'group' ? layer.children.map(visit) : [];
+      if (layer.type === 'generated') { const generatedId = `${layer.id}:generated`; next.set(generatedId, { id: generatedId, kind: 'source', dependencies: [], signature: JSON.stringify([layer.generatorId, layer.parameters]) }); dependencies.push(generatedId); }
       const { effects, ...source } = layer;
       next.set(sourceId, { id: sourceId, kind: layer.type === 'group' ? 'group' : 'source', dependencies, signature: JSON.stringify(source) });
       let previous = sourceId;

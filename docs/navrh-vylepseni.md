@@ -2,13 +2,13 @@
 
 Datum: 3. 10. 2026. Výchozí verze: 0.6. Tento dokument je návrh, nikoli seznam hotových funkcí nebo závazný harmonogram.
 
-Realizace v 0.7: hledání a oblíbené efekty, duplikace, kopírování stacků, uživatelské a ukázkové presety s přenosným formátem a automatická zotavovací kopie. Podrobnosti v [návodu 0.7](workflow-0.7.md). Dalšími většími kroky zůstávají skupiny, generátorové vrstvy a masky; seznam posledních projektů, náhledové kartičky efektů a rozšířený dialog odchodu jsou další úpravy ovládání.
+Realizace v 0.7: hledání a oblíbené efekty, duplikace, kopírování stacků, uživatelské a ukázkové presety s přenosným formátem a automatická zotavovací kopie. Podrobnosti v [návodu 0.7](workflow-0.7.md). Realizace v 0.8: osm generátorových vrstev, rekurzivní editorové operace, strom a vnořování skupin, skupinové efekty a projekty v2 s migrací v1; [návod 0.8](composition-0.8.md). Masky, vícečetný výběr a rozšířená správa skupin zůstávají návaznými úkoly. Seznam posledních projektů, náhledové kartičky efektů a rozšířený dialog odchodu jsou další úpravy ovládání.
 
 ## Výchozí stav a směr
 
 RasterLab obsahuje 48 efektů, nedestruktivní vrstvy, vstupní reference, projekty, export, historii a render graph s cache. Další rozvoj má zpřístupnit složitější kompozice, usnadnit opakování experimentů a zlepšit práci s náročnými dokumenty.
 
-Z aktuálního kódu vyplývají hlavní mezery: záložky Generators a Presets jsou zatím neaktivní; skupiny podporuje model a render, ale chybí jejich editor; generated a mask vrstvy nemají renderer; více vstupů v executorové větvi znamená primary a secondary; náhled používá stejné rozlišení jako export; desktopový projekt tvoří JSON a složka assets. Tyto oblasti poskytují konkrétní základ pro další iterace.
+Z výchozího kódu 0.6 vyplývaly hlavní mezery: neaktivní Generators a Presets, chybějící editor skupin a renderer generátorů a masek. Verze 0.7 a 0.8 doplnily presety, generátory a první správu skupin. Nadále chybí masky; více vstupů v executorové větvi znamená primary a secondary, náhled používá stejné rozlišení jako export a desktopový projekt tvoří JSON a složka assets. Tyto oblasti poskytují základ pro další iterace.
 
 Priorita P1 znamená doporučený nejbližší rozvoj, P2 návazné rozšíření a P3 dlouhodobou možnost. Náročnost malá/střední/velká je relativní technický odhad podle rozsahu změn, nikoli časový odhad.
 
@@ -110,4 +110,4 @@ Hotovo znamená: mozaika alespoň ze tří zdrojů funguje i po save/load, skryt
 
 Čísla verzí jsou orientační označení etap. V každé etapě dodat nejprve jeden kompletní průchod od UI přes dokument, historii a render po save/load a export. Stávajících 48 efektů ověřovat regresními GPU testy; nové typy vrstev a migrace dostanou cílené roundtrip testy. Nativní save/open/close a obnovu po pádu ověřit také přímo v desktopové aplikaci.
 
-Doporučeným prvním konkrétním úkolem je kopírování stacku a uživatelské presety spolu s vyhledáváním efektů. Využijí současné API a výrazně zjednoduší práci se všemi již dostupnými moduly.
+Doporučeným dalším konkrétním úkolem po 0.8 jsou masky z jiné vrstvy s kontrolou cyklů a kompletním propojením s historií, projekty a exportem. Následovat může vícečetný výběr, rozpuštění a duplikace skupiny a měření výkonu náročných kompozic.

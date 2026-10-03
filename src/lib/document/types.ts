@@ -24,7 +24,7 @@ export interface LayerBase {
 export interface RasterLayer extends LayerBase { type: 'raster'; assetId: string }
 export interface GroupLayer extends LayerBase { type: 'group'; children: LayerNode[] }
 export interface GeneratedLayer extends LayerBase {
-  type: 'generated'; generatorId: string; parameters: Record<string, string | number | boolean>;
+  type: 'generated'; generatorId: string; parameters: Record<string, string | number | boolean | null>;
 }
 export interface AdjustmentLayer extends LayerBase { type: 'adjustment'; inputs: string[] }
 export interface MaskLayer extends LayerBase { type: 'mask'; assetId: string }

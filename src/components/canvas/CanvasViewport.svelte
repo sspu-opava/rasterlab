@@ -7,6 +7,7 @@
   import { setExporter } from '../../lib/project/export';
   import { documentPoint, fitViewport, zoomAt } from '../../lib/render/viewport';
   import type { Point } from '../../lib/document/types';
+  import { findLayer, layerLocked, localDragDelta } from '../../lib/document/layers';
   let { onimport }: { onimport: () => void } = $props();
   let host: HTMLDivElement;
   let ready = $state(false);
@@ -42,8 +43,8 @@
       if (space || get(tool) === 'pan' || event.button === 1) {
         drag = { id: event.pointerId, start: point(event), mode: 'pan', x: view.x, y: view.y };
       } else {
-        const layer = get(documentStore).layers.find(layer => layer.id === get(selectedLayerId));
-        if (layer && !layer.locked && layer.visible) drag = { id: event.pointerId, start: point(event), mode: 'layer', x: layer.position.x, y: layer.position.y, layerId: layer.id };
+        const layer = findLayer(get(documentStore).layers, get(selectedLayerId));
+        if (layer && !layerLocked(get(documentStore).layers, layer.id) && layer.visible) drag = { id: event.pointerId, start: point(event), mode: 'layer', x: layer.position.x, y: layer.position.y, layerId: layer.id };
       }
       if (drag) { event.preventDefault(); host.setPointerCapture(event.pointerId); host.classList.add('dragging'); }
     }, options);
@@ -54,7 +55,7 @@
       const dx = p.x - drag.start.x;
       const dy = p.y - drag.start.y;
       if (drag.mode === 'pan') viewportStore.update(view => ({ ...view, x: drag!.x + dx, y: drag!.y + dy }));
-      else if (drag.layerId) updateLayer(drag.layerId, { position: { x: drag.x + dx / get(viewportStore).zoom, y: drag.y + dy / get(viewportStore).zoom } });
+      else if (drag.layerId) { const delta = localDragDelta(get(documentStore).layers, drag.layerId, dx / get(viewportStore).zoom, dy / get(viewportStore).zoom); updateLayer(drag.layerId, { position: { x: drag.x + delta.x, y: drag.y + delta.y } }); }
     }, options);
     const stop = () => { if (drag) finishEdit(); drag = null; host.classList.remove('dragging'); };
     host.addEventListener('pointerup', stop, options);

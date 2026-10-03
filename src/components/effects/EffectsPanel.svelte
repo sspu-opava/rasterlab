@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { layerEntries } from '../../lib/document/layers';
   import { Plus, Power, Trash2, ChevronUp, ChevronDown, SlidersHorizontal, RotateCcw, AlertTriangle, Star, Copy, ClipboardPaste, Save } from '@lucide/svelte';
   import type { LayerNode } from '../../lib/document/types';
   import { effectRegistry } from '../../lib/effects';
@@ -46,7 +47,7 @@
       <button class="bypass-button" disabled={layer.locked} onclick={() => setEffectEnabled(layer.id, selected.id, !selected.enabled)}>{selected.enabled ? 'After · efekt aktivní' : 'Before · bypass efektu'}</button>
       <div class="stack-tools"><button class="small-button" disabled={layer.locked || $busy} onclick={() => duplicateEffect(layer.id, selected.id)}><Copy size={13}/>Duplikovat efekt</button><button class="icon-button" aria-label="Uložit vybraný efekt jako preset" title="Uložit efekt jako preset" disabled={layer.locked || $busy} onclick={() => saving = 'effect'}><Save size={15}/></button></div>
       {#if $effectErrors.has(selected.id)}<p class="effect-error" role="status"><AlertTriangle size={14}/> {$effectErrors.get(selected.id)} V náhledu se použije vstupní obraz.</p>{/if}
-      {#if definition}<p class="effect-description">{definition.description}</p><EffectParameters {definition} instance={selected} {layer} layers={$documentStore.layers}/>{/if}
+      {#if definition}<p class="effect-description">{definition.description}</p><EffectParameters {definition} instance={selected} {layer} layers={layerEntries($documentStore.layers).map(entry => entry.layer)}/>{/if}
     {/if}
   {:else}<div class="effects-empty"><SlidersHorizontal size={28}/><strong>Vyberte vrstvu</strong><p>Každá vrstva má vlastní nedestruktivní effect stack.</p></div>{/if}
 </div>

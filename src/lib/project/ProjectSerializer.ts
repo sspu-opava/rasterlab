@@ -1,7 +1,7 @@
 import type { AssetManager } from '../assets/AssetManager';
 import type { LayerNode, RasterDocument } from '../document/types';
 export interface ProjectAsset { id: string; name: string; width: number; height: number; mimeType: string; file: string; dataUrl?: string }
-export interface ProjectFile { format: 'rasterlab'; version: 1; document: RasterDocument; assets: ProjectAsset[] }
+export interface ProjectFile { format: 'rasterlab'; version: 2; document: RasterDocument; assets: ProjectAsset[] }
 export function referencedAssets(layers: LayerNode[], ids = new Set<string>()): Set<string> {
   for (const layer of layers) {
     if (layer.type === 'raster' || layer.type === 'mask') ids.add(layer.assetId);
@@ -16,7 +16,7 @@ export class ProjectSerializer {
       const extension = asset.mimeType === 'image/jpeg' ? 'jpg' : asset.mimeType === 'image/webp' ? 'webp' : 'png';
       return { id, name: asset.name, width: asset.width, height: asset.height, mimeType: asset.mimeType, file: `assets/${id}.${extension}` };
     });
-    return { format: 'rasterlab', version: 1, document, assets: manifest };
+    return { format: 'rasterlab', version: 2, document, assets: manifest };
   }
   static stringify(project: ProjectFile): string { return JSON.stringify(project, null, 2); }
   static async portable(project: ProjectFile, assets: AssetManager): Promise<ProjectFile> {

@@ -1,4 +1,4 @@
-# Architektura RasterLabu 0.7
+# Architektura RasterLabu 0.8
 
 ```text
 Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
@@ -40,4 +40,8 @@ Rust je omezen na filesystem: `save_project`, `load_project`, `write_export` a `
 
 ## Rozsah
 
-UI plně ovládá rastrové vrstvy nejvyšší úrovně. Serializace a render podporují skupiny, ale jejich vytváření a ovládání dětí přijde v další iteraci. Masky, adjustment/generated layer renderery a WebGPU zatím nejsou implementovány. Parametrové typy a datové modely pro ně existují. Crumple, Strips, Random Tiles, Bit Plane Extractor, Photocopy a Interference jsou samostatné interní moduly. CPU generátory fragmentů a záhybů jsou oddělené od GPU renderu a ukládají se pouze jejich parametry.
+UI ovládá rastrové i generátorové vrstvy a vnořené skupiny. `document/layers.ts` poskytuje rekurzivní průchod, vyhledání, mapování, kontrolu grafu a přesuny. Zámek předka chrání potomky; drag dítěte převádí dokumentový posun inverzními transformacemi předků. Přesun do jiné skupiny zachová místní transformaci, takže transformovaný nový rodič může změnit výslednou polohu.
+
+`generators/index.ts` obsahuje samostatnou registry osmi zdrojů využívající metadata a runtime API efektů. RenderGraph přidává uzel generated → source → effects; změna parametrů zneplatní zdroj i následníky. Registry efektů nadále obsahuje 48 modulů. Projekty v2 uchovávají generatorId/parameters, deserializer migruje v1.
+
+Masky, adjustment layer renderer a WebGPU zatím nejsou implementovány. Vícečetný výběr, duplikace celé skupiny a rozpuštění skupiny jsou další rozšíření. CPU generátory fragmentů a záhybů jsou oddělené od GPU renderu a ukládají se pouze jejich parametry.

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { findLayer, layerLocked } from '../../lib/document/layers';
   import { onMount } from 'svelte';
   import { X } from '@lucide/svelte';
   import { flattenLayers, presetWarnings, type EffectPreset } from '../../lib/presets/presets';
@@ -15,7 +16,7 @@
 <dialog bind:this={dialog} oncancel={onclose} class="new-document-dialog preset-dialog">
   <form onsubmit={submit}>
     <div class="dialog-heading"><h2>Použít preset</h2><button type="button" class="icon-button" aria-label="Zavřít preset" onclick={onclose}><X size={18}/></button></div>
-    <p><strong>{preset.name}</strong> · {preset.effects.length} efektů<br/>Cíl: {$documentStore.layers.find(layer => layer.id === layerId)?.name}</p>
+    <p><strong>{preset.name}</strong> · {preset.effects.length} efektů<br/>Cíl: {findLayer($documentStore.layers, layerId)?.name}</p>
     <ol class="preset-effect-list">{#each preset.effects as effect}<li>{effect.effectId}{#if !effect.enabled} · vypnutý{/if}</li>{/each}</ol>
     {#each preset.roles as role}<label class="property-wide"><span>{role.label}</span><select aria-label={`Zdroj presetu: ${role.label}`} required bind:value={bindings[role.id]}><option value="">Vyberte vrstvu…</option>{#each flattenLayers($documentStore.layers).filter(layer => layer.id !== layerId) as layer}<option value={layer.id}>{layer.name}{!layer.visible ? ' · skrytá' : ''}</option>{/each}</select></label>{/each}
     <label class="property-wide"><span>Umístění</span><select aria-label="Umístění presetu" bind:value={replace}><option value={false}>Přidat na konec stacku</option><option value={true}>Nahradit celý stack</option></select></label>

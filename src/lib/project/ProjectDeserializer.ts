@@ -3,6 +3,7 @@ import { referencedAssets } from './ProjectSerializer';
 import type { LayerNode } from '../document/types';
 import { effectRegistry } from '../effects';
 import { validateParameters } from '../effects/core/parameters';
+import { generatorRegistry } from '../generators';
 
 function object(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Neplatná struktura projektu.'); return value as Record<string, unknown>; }
 function text(value: unknown, max = 256): asserts value is string { if (typeof value !== 'string' || value.length === 0 || value.length > max) throw new Error('Neplatný textový údaj projektu.'); }
@@ -16,7 +17,7 @@ export class ProjectDeserializer {
     if (json.length > 300 * 1024 * 1024) throw new Error('Projekt přesahuje maximální velikost 300 MB.');
     const raw: unknown = JSON.parse(json);
     const project = object(raw);
-    if (project.format !== 'rasterlab' || project.version !== 1) throw new Error('Nepodporovaný formát nebo verze projektu.');
+    if (project.format !== 'rasterlab' || ![1, 2].includes(Number(project.version)) || typeof project.version !== 'number') throw new Error('Nepodporovaný formát nebo verze projektu.');
     const document = object(project.document); id(document.id); text(document.name); text(document.createdAt); text(document.modifiedAt);
     number(document.width, 1, 8192); number(document.height, 1, 8192);
     if (!Number.isInteger(document.width) || !Number.isInteger(document.height)) throw new Error('Rozměry musí být celá čísla.');
@@ -40,6 +41,7 @@ export class ProjectDeserializer {
         if (!['normal', 'multiply', 'screen', 'overlay', 'difference', 'add'].includes(String(layer.blendMode))) throw new Error('Neplatný blend mode.');
         if (layer.type === 'group') visit(layer.children, depth + 1);
         else if (layer.type === 'raster') { id(layer.assetId); if (!assets.has(layer.assetId)) throw new Error('Chybějící asset reference.'); }
+        else if (layer.type === 'generated' && project.version === 2) { id(layer.generatorId); const definition = generatorRegistry.get(layer.generatorId); if (!definition) throw new Error('Neznámý generátor.'); layer.parameters = validateParameters(definition, object(layer.parameters)); }
         else throw new Error('Tento typ vrstvy zatím není podporován.');
         if (layer.maskId !== undefined) throw new Error('Masky zatím nejsou podporovány.');
         if (!Array.isArray(layer.effects) || layer.effects.length > 32) throw new Error('Neplatný effect stack.');
@@ -56,6 +58,7 @@ export class ProjectDeserializer {
     };
     visit(document.layers);
     const result = raw as ProjectFile;
+    result.version = 2;
     const dependencies = new Map<string, string[]>();
     const connections = (layers: LayerNode[]) => { for (const layer of layers) {
       const refs = layer.effects.flatMap(effect => Object.values(effect.inputs));

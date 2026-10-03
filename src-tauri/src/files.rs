@@ -40,7 +40,10 @@ fn manifest(json: &str) -> Result<Manifest, String> {
         return Err("Projekt je příliš velký.".into());
     }
     let manifest: Manifest = serde_json::from_str(json).map_err(|e| e.to_string())?;
-    if manifest.format != "rasterlab" || manifest.version != 1 || manifest.assets.len() > 100 {
+    if manifest.format != "rasterlab"
+        || ![1, 2].contains(&manifest.version)
+        || manifest.assets.len() > 100
+    {
         return Err("Nepodporovaný formát projektu.".into());
     }
     let mut ids = std::collections::HashSet::new();
@@ -240,7 +243,7 @@ mod tests {
     use super::*;
     #[test]
     fn rejects_traversal_and_future_versions() {
-        assert!(manifest(r#"{"format":"rasterlab","version":2,"assets":[]}"#).is_err());
+        assert!(manifest(r#"{"format":"rasterlab","version":3,"assets":[]}"#).is_err());
         assert!(manifest(r#"{"format":"rasterlab","version":1,"assets":[{"id":"a","mimeType":"image/png","file":"../secret.png"}]}"#).is_err());
     }
     #[test]
@@ -274,6 +277,27 @@ mod tests {
         let loaded = load_project(path).unwrap();
         assert_eq!(loaded.project_json, json);
         assert_eq!(loaded.assets[0].bytes, vec![1, 2, 3]);
+        fs::remove_dir_all(directory).unwrap();
+    }
+    #[test]
+    fn generated_v2_project_without_assets_roundtrips() {
+        let directory = std::env::temp_dir().join(format!(
+            "rasterlab-v2-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        let path = directory
+            .join("generated.json")
+            .to_string_lossy()
+            .into_owned();
+        let json = r#"{"format":"rasterlab","version":2,"document":{"layers":[{"type":"generated","generatorId":"checker","parameters":{"cellSize":32}}]},"assets":[]}"#;
+        save_project(path.clone(), json.into(), vec![]).unwrap();
+        let loaded = load_project(path).unwrap();
+        assert_eq!(loaded.project_json, json);
+        assert!(loaded.assets.is_empty());
         fs::remove_dir_all(directory).unwrap();
     }
     #[test]

@@ -1,23 +1,23 @@
-# Projektový formát 1
+# Projektový formát 2
 
 Desktop uloží uživatelem zvolený JSON a sousední `assets/` s originálními PNG/JPEG/WebP. Přenášejte oba. ZIP / `.rlab` není implementován.
 
 ```json
 {
   "format": "rasterlab",
-  "version": 1,
+  "version": 2,
   "document": { "id": "uuid", "name": "Untitled", "width": 1000, "height": 1000, "layers": [], "background": { "r": 0, "g": 0, "b": 0, "a": 0 }, "createdAt": "ISO", "modifiedAt": "ISO" },
   "assets": [{ "id": "asset-uuid", "name": "photo.png", "width": 1000, "height": 1000, "mimeType": "image/png", "file": "assets/asset-uuid.png" }]
 }
 ```
 
-Vrstva odkazuje pouze na `assetId`. Serializují se transformace, krytí, blend, visibility/lock, effect instance parameters/inputs/enabled a group children. Pixi objekty a runtime URL v projektu nejsou. Nepoužité importy a historie se neukládají.
+Rastrová vrstva odkazuje na `assetId`. Generátorová vrstva má `type: "generated"`, `generatorId` a `parameters`; nepoužívá asset. ID generátorů jsou `noise`, `checker`, `lines`, `dots`, `fbm`, `voronoi`, `interference` a `radial`. Skupina má `type: "group"` a rekurzivní `children`. Serializují se transformace, krytí, blend, visibility/lock a effect instance parameters/inputs/enabled. Pixi objekty a runtime URL v projektu nejsou. Nepoužité importy a historie se neukládají.
 
 Prohlížeč používá stejnou obálku a přidá k assetům `dataUrl: "data:image/png;base64,..."`. Tento přenosný JSON lze otevřít také v Tauri; příští desktopový save převede data do `assets/`. Browser načítá pouze přenosné JSON; desktop načítá i adresářové projekty. Nejde o ZIP podporu.
 
 ## Validace a migrations
 
-ProjectDeserializer.parse nejprve ověří format/version, rozměry, typy, transformace, asset manifest, duplicitní UUID a všechny vstupní reference. Odmítá cykly a neimplementované typy vrstev/masky. Známé parametry normalizuje podle definice, neznámé effectId zachová pro budoucí pluginy. Neznámá verze se odmítne před změnou živého stavu; zde se v budoucnu zařadí migrace.
+ProjectDeserializer.parse přijímá verze 1 a 2; původní rastrové a skupinové projekty v1 převede v paměti na v2. Generátory vyžadují v2 a známé generatorId. Nejprve ověří format/version, rozměry, typy, transformace, asset manifest, duplicitní UUID a všechny vstupní reference. Odmítá cykly včetně skupin a neimplementované typy vrstev/masky. Známé parametry normalizuje podle definice, neznámé effectId zachová pro budoucí pluginy. Neznámá verze se odmítne před změnou živého stavu. Další uložení vždy vytvoří v2, kterou starší aplikace neotevře.
 
 Bitmapy se dekódují do dočasného AssetManageru, rozměry se porovnají s manifestem a teprve po úspěchu se vymění dokument. Chybný soubor zachová současný dokument. Limity: 100 vrstev/assetů, 32 efektů na vrstvu, 12 úrovní skupin, 8192 px na stranu, 100 MB na bitmapu a 300 MB na projektová data. Praktický počet efektů omezuje GPU paměť.
 
@@ -29,4 +29,4 @@ Ctrl+S používá poslední desktopovou cestu; Ctrl+Shift+S zobrazí výběr jin
 
 Export je oddělen od projektu: full-resolution PNG/JPEG/WebP, kvalita JPEG/WebP, bílé podložení průhlednosti JPEG. Export neobsahuje editorový checkerboard, hranici, zoom ani pan.
 
-Od verze 0.7 existují dva další oddělené formáty: `.preset.json` s obálkou `rasterlab-preset`, verze 1, a interní IndexedDB kopie `rasterlab-recovery`, verze 1. Preset neobsahuje assety; kopie obnovy ukládá projekt verze 1 spolu s původními Bloby v jedné transakci. Žádný z těchto mechanismů nemění formát ručně ukládaného projektu. Podrobnosti v [návodu 0.7](workflow-0.7.md).
+Od verze 0.7 existují dva další oddělené formáty: `.preset.json` s obálkou `rasterlab-preset`, verze 1, a interní IndexedDB kopie `rasterlab-recovery`, verze 1. Preset neobsahuje assety; kopie obnovy ukládá projekt spolu s původními Bloby v jedné transakci. V aplikaci 0.8 je vložený projekt v2; starší kopie s projektem v1 se migrují při načtení. Podrobnosti v [návodu 0.7](workflow-0.7.md).

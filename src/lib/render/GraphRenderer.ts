@@ -9,6 +9,7 @@ import { RenderGraph } from './RenderGraph';
 import { RenderTargetPool } from './RenderTargetPool';
 import type { RenderMode } from './RenderGraph';
 import { logError } from '../utils/logger';
+import { generatorRegistry } from '../generators';
 
 /** Evaluates document-space nodes independently of the editor viewport. */
 export class GraphRenderer {
@@ -16,6 +17,7 @@ export class GraphRenderer {
   private pool = new RenderTargetPool();
   private targets = new Map<string, RenderTexture>();
   private effects = new Map<string, { effectId: string; renderer: EffectRenderer }>();
+  private generators = new Map<string, { generatorId: string; renderer: EffectRenderer }>();
   private contextKey = '';
   readonly errors = new Map<string, string>();
   constructor(private renderer: Renderer, private assets: AssetManager) {}
@@ -60,6 +62,23 @@ export class GraphRenderer {
         else {
           const source = layer.type === 'group' ? composite(layer.children) : new Container();
           if (layer.type === 'raster' || layer.type === 'mask') source.addChild(new Sprite(this.assets.texture(layer.assetId)));
+          if (layer.type === 'generated') {
+            const generatedId = `${id}:generated`;
+            try {
+              if (this.graph.dirty.has(generatedId) || !this.targets.has(generatedId) || this.errors.has(id)) {
+                const definition = generatorRegistry.get(layer.generatorId); if (!definition) throw new Error(`Neznámý generátor: ${layer.generatorId}`);
+                let runtime = this.generators.get(id);
+                if (runtime?.generatorId !== layer.generatorId) { runtime?.renderer.destroy(); runtime = undefined; }
+                if (!runtime) { runtime = { generatorId: layer.generatorId, renderer: definition.createRenderer(context) }; this.generators.set(id, runtime); }
+                runtime.renderer.update(validateParameters(definition, layer.parameters), context);
+                const sprite = new Sprite(Texture.WHITE); sprite.width = document.width; sprite.height = document.height; sprite.filterArea = new Rectangle(0, 0, document.width, document.height);
+                if (!runtime.renderer.filter) throw new Error('Generátor musí poskytovat filtr.');
+                sprite.filters = [runtime.renderer.filter];
+                try { draw(generatedId, sprite); } finally { sprite.filters = []; sprite.destroy(); }
+              }
+              source.addChild(new Sprite(this.targets.get(generatedId)!)); this.errors.delete(id);
+            } catch (error) { const message = error instanceof Error ? error.message : 'Generátor selhal.'; if (this.errors.get(id) !== message) logError('EFFECT', message, error); this.errors.set(id, message); }
+          }
           source.position.set(layer.position.x, layer.position.y); source.scale.set(layer.scale.x, layer.scale.y); source.rotation = layer.rotation * Math.PI / 180;
           try { input = draw(sourceId, source); } finally { source.destroy({ children: true }); }
         }
@@ -103,10 +122,12 @@ export class GraphRenderer {
     }
     for (const [id, texture] of this.targets) if (!this.graph.nodes.has(id)) { this.pool.release(texture); this.targets.delete(id); }
     for (const [id, runtime] of this.effects) if (!this.graph.nodes.has(id)) { runtime.renderer.destroy(); this.effects.delete(id); this.errors.delete(id); }
+    for (const [id, runtime] of this.generators) if (!this.graph.nodes.has(`${id}:generated`)) { runtime.renderer.destroy(); this.generators.delete(id); this.errors.delete(id); }
     this.graph.markClean(); return result;
   }
   clear(): void {
     for (const runtime of this.effects.values()) runtime.renderer.destroy();
+    for (const runtime of this.generators.values()) runtime.renderer.destroy(); this.generators.clear();
     this.effects.clear(); this.targets.clear(); this.pool.clear(); this.errors.clear(); this.graph = new RenderGraph();
   }
 }

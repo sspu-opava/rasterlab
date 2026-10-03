@@ -1,10 +1,10 @@
-# Ověření RasterLabu 0.7
+# Ověření RasterLabu 0.8
 
 Windows, 3. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro `x86_64-pc-windows-msvc`, Visual Studio 2019 Community C++ tools, WebView2.
 
 - TypeScript/Svelte check: 0 chyb a 0 varování.
-- Unit tests: 40 testů modelu, viewportu, grafu, registry, parametrů, seedovaného PRNG, boolean/modulo operací, historie, serializace, presetů, zotavení a procedurálních map. Mapy kontrolují bijekci shuffle, stabilitu seedu, změny rozměrů, normalizované záhyby a Voronoi centra/vektory. Registry obsahuje 48 jedinečných definic s validními defaulty. Presety ověřují mapování rolí, nezávislé instance, limity, zamčený cíl, cykly včetně skupin, neznámé moduly a ukázkové recepty. Kopie obnovy kontrolují originální Bloby, verze, data a dirty stav obnovené historie.
-- Rust: 3 testy skutečného save/load/overwrite, odmítnutí traversal/future version a atomického exportu/overwrite presetu s odmítnutím neplatné přípony, verze a velikosti bez změny předchozího souboru.
+- Unit tests: 47 testů v 15 souborech. Vedle modelu, efektů, historie, presetů a zotavení ověřují rekurzivní přesuny a zámky, cykly skupin, převod dragu přes transformaci rodiče, osm generátorů, projekt v2/migraci v1 a editaci vnořené vrstvy přes undo/redo. Registry efektů nadále obsahuje 48 jedinečných definic s validními defaulty.
+- Rust: 4 testy skutečného save/load/overwrite v1, projektu v2 bez bitmap, odmítnutí traversal/future version a atomického exportu/overwrite presetu s odmítnutím neplatné přípony, verze a velikosti bez změny předchozího souboru.
 - Frontend production build úspěšný.
 - Browser smoke: WebGL, PNG/JPEG/WebP import, opacity/visibility porovnané přes canvas snímky, blend modes, zoom, pan, lock, rozměry a neplatný bitmapový import.
 - Feature test: všech 10 skutečných GPU efektů, bypass/reset, seed determinism, undo/redo, project save/load se shodnými exportovanými bytes, failed load zachová dokument, PNG/JPEG/WebP export stejného rozlišení a invariance vůči zoom/pan.
@@ -16,11 +16,12 @@ Windows, 3. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro 
 - Remaining test: šest posledních katalogových GPU efektů, determinismus, seed/undo a bypass. Kontroluje aritmetické výsledky Channel Algebra, identity RGB/alpha, bezpečné dělení, chybný výraz a obnovu pomocí undo i uložení aktivního pole přes Ctrl+S. Ověřuje rozdíl rekurzivních hloubek, skutečný růst buněk a zachování živých zárodků, přesné opakování pixelového proudu a neutrální nastavení všech efektů. Projekt se šesti moduly zachová parametry a exportované pixely; export nezávisí na zoomu a všechny formáty mají správný rozměr.
 - Finální produkční build: všechny čtyři GPU testovací skripty a základní browser smoke prošly s CSP Tauri, celkem pokrývají 48 efektů. TypeScript a Vite build nemají chyby ani varování; Svelte runtime je v samostatném chunku.
 - Workflow test: hledání, oblíbené, nezávislá duplikace, uložení efektu i stacku, import/export a trvalost presetů, mapování zdrojů, odmítnutí cyklů a limitů bez částečného zápisu, undo/redo a shodné GPU pixely při použití presetu. Skutečný IndexedDB autosave ukládá původní Bloby, nemění dirty stav, po reloadu obnoví totožný výstup a ruční save odstraní starou kopii. Nativní exportní větev je ověřena s mockem dialogu a invoke; filesystem zápis kryje Rust test.
-- Desktop release build vytvořil EXE a NSIS instalátor 0.7.0. Distribuční kopie jsou v `releases/`; verze EXE je ověřena ze systémových metadat.
+- Composition test: osm generátorů na skutečném GPU bez assetů, neprázdný výstup a plná alpha, přesné pixely šachovnice, determinismus, seed/undo, projekty v2 a migrace v1. Skupiny ověřují identitu při vytvoření, sbalování, vnoření, transformace a krytí rodiče, dědičný zámek, přesuny, pořadí sourozenců, skryté vstupní reference, efekty dítěte i rodiče, presety a obnovu smazaných zdrojů pomocí undo. Export PNG/JPEG/WebP zachovává rozměr a nezávisí na viewportu.
+- Desktop release build vytvořil EXE a NSIS instalátor 0.8.0. Distribuční kopie jsou v `releases/`; verze obou souborů je ověřena ze systémových metadat.
 - Nativní UI kontrolu blokuje nedostupné připojení computer-use: `Computer Use native pipe is unavailable` / os error 2. Start EXE a nativní dialogy této verze nebyly automaticky ověřeny. Browser testy běží proti produkčnímu buildu s CSP desktopové aplikace.
 - `npm audit` v předchozí iteraci: 0 známých zranitelností; tato iterace nepřidává závislosti.
 
-Snímky: `test-results/foundation-empty.png`, `foundation-demo.png`, `effects-projects.png`, `catalog-effects.png`, `expansion-stack.png`, `expansion-sheet.png`, `remaining-stack.png`, `remaining-sheet.png`, `workflow-presets.png`. Contact sheets obsahují skutečné exporty dvaceti modulů sady 0.5 a šesti modulů sady 0.6. Nový panel presetů, hledání, oblíbené a ovládání stacků prošly vizuální kontrolou browser snímku.
+Snímky: `test-results/foundation-empty.png`, `foundation-demo.png`, `effects-projects.png`, `catalog-effects.png`, `expansion-stack.png`, `expansion-sheet.png`, `remaining-stack.png`, `remaining-sheet.png`, `workflow-presets.png`, `composition-groups.png`, `composition-generators.png`. Contact sheets obsahují skutečné exporty modulů a osmi generátorů. Strom vnořených skupin a panel generátorů prošly vizuální kontrolou browser snímku.
 
 Vývojový port 1420 byl v tomto systému rezervovaný Windows; Vite/Tauri používají 5173. Nově instalovaný Rust vyžaduje nový terminál nebo aktualizaci PATH aktuálního procesu.
 

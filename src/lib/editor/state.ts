@@ -1,6 +1,6 @@
 import { get, writable } from 'svelte/store';
 import { AssetManager } from '../assets/AssetManager';
-import { createDocument, createRasterLayer } from '../document/factory';
+import { createDocument, createRasterLayer, layerDefaults } from '../document/factory';
 import type { EffectInstance, LayerNode, RasterDocument } from '../document/types';
 import { logError } from '../utils/logger';
 import { CommandHistory } from '../history/CommandHistory';
@@ -13,6 +13,8 @@ import { exportDocument } from '../project/export';
 import type { ExportFormat } from '../project/export';
 import { createPreset, instantiatePreset, type EffectPreset } from '../presets/presets';
 import { readRecovery, writeRecovery, clearRecovery, recoverySnapshot, type RecoverySnapshot } from '../project/recovery';
+import { findLayer, layerEntries, layerLocked, mapLayers, removeLayer, reparentLayer, assertLayerGraph } from '../document/layers';
+import { generatorRegistry } from '../generators';
 
 export const assets = new AssetManager();
 export const documentStore = writable(createDocument());
@@ -34,7 +36,7 @@ export const viewAction = writable<{ type: 'fit' | 'actual'; sequence: number }>
 export function requestView(type: 'fit' | 'actual'): void { viewAction.update(value => ({ type, sequence: value.sequence + 1 })); }
 const history = new CommandHistory<RasterDocument>(get(documentStore), document => {
   documentStore.set(document);
-  if (!document.layers.some(layer => layer.id === get(selectedLayerId))) selectedLayerId.set(document.layers[0]?.id ?? null);
+  if (!findLayer(document.layers, get(selectedLayerId))) selectedLayerId.set(document.layers[0]?.id ?? null);
 }, () => historyState.set({ canUndo: history.canUndo, canRedo: history.canRedo, dirty: history.dirty, undoLabel: history.undoLabel, redoLabel: history.redoLabel }));
 function commit(label: string, transform: (document: RasterDocument) => RasterDocument, mergeKey?: string): void {
   const before = get(documentStore); const result = transform(before);
@@ -72,18 +74,24 @@ export function updateLayer(id: string, patch: Partial<LayerNode>, merge = true)
   if (patch.scale) patch.scale = { x: bounded(patch.scale.x, 0.01, 100), y: bounded(patch.scale.y, 0.01, 100) };
   if (patch.rotation !== undefined) patch.rotation = bounded(patch.rotation);
   const continuous = Object.keys(patch).every(key => ['opacity', 'position', 'scale', 'rotation'].includes(key));
-  commit('Upravit vrstvu', document => ({ ...document, layers: document.layers.map(layer => layer.id === id && (!layer.locked || Object.keys(patch).every(key => key === 'locked' || key === 'visible')) ? { ...layer, ...patch } as LayerNode : layer) }), merge && continuous ? `layer:${id}:${Object.keys(patch).join(',')}` : undefined);
+  const entry = layerEntries(get(documentStore).layers).find(entry => entry.layer.id === id);
+  if (!entry || entry.inheritedLock || (entry.layer.locked && !Object.keys(patch).every(key => key === 'locked' || key === 'visible'))) return;
+  commit('Upravit vrstvu', document => ({ ...document, layers: mapLayers(document.layers, layer => layer.id === id ? { ...layer, ...patch } as LayerNode : layer) }), merge && continuous ? `layer:${id}:${Object.keys(patch).join(',')}` : undefined);
 }
 export function deleteLayer(id: string): void {
-  if (get(documentStore).layers.find(layer => layer.id === id)?.locked || get(busy)) return;
-  commit('Odstranit vrstvu', document => ({ ...document, layers: document.layers.filter(layer => layer.id !== id) }));
+  const document = get(documentStore), layer = findLayer(document.layers, id);
+  if (!layer || layerLocked(document.layers, id) || get(busy)) return;
+  if (layer.type === 'group' && layerEntries(layer.children).some(entry => entry.layer.locked)) { reportError(new Error('Skupina obsahuje zamčené vrstvy.')); return; }
+  const removed = new Set([id, ...(layer.type === 'group' ? layerEntries(layer.children).map(entry => entry.layer.id) : [])]);
+  commit('Odstranit vrstvu', document => ({ ...document, layers: mapLayers(removeLayer(document.layers, id), item => ({ ...item, effects: item.effects.map(effect => ({ ...effect, inputs: Object.fromEntries(Object.entries(effect.inputs).filter(([, ref]) => !removed.has(ref))) })) })) }));
 }
 export function reorderLayer(id: string, targetId: string): void {
-  if (get(busy)) return;
+  if (get(busy) || layerLocked(get(documentStore).layers, id)) return;
   commit('Přesunout vrstvu', document => {
-    const layers = [...document.layers]; const from = layers.findIndex(layer => layer.id === id); const to = layers.findIndex(layer => layer.id === targetId);
-    if (from < 0 || to < 0 || layers[from].locked) return document;
-    layers.splice(to, 0, layers.splice(from, 1)[0]); return { ...document, layers };
+    const entries = layerEntries(document.layers), fromEntry = entries.find(entry => entry.layer.id === id), toEntry = entries.find(entry => entry.layer.id === targetId);
+    if (!fromEntry || !toEntry || fromEntry.parentId !== toEntry.parentId) return document;
+    const reorder = (siblings: LayerNode[]) => { const next = [...siblings], from = next.findIndex(layer => layer.id === id), to = next.findIndex(layer => layer.id === targetId); next.splice(to, 0, next.splice(from, 1)[0]); return next; };
+    return { ...document, layers: fromEntry.parentId ? mapLayers(document.layers, item => item.id === fromEntry.parentId && item.type === 'group' ? { ...item, children: reorder(item.children) } : item) : reorder(document.layers) };
   });
 }
 export function newDocument(width: number, height: number): void {
@@ -92,16 +100,17 @@ export function newDocument(width: number, height: number): void {
 }
 export function addEffect(layerId: string, effectId: string): void {
   const definition = effectRegistry.get(effectId); if (!definition) return;
-  const layer = get(documentStore).layers.find(layer => layer.id === layerId);
-  if (!layer || layer.locked || get(busy)) return;
+  const layer = findLayer(get(documentStore).layers, layerId);
+  if (!layer || layerLocked(get(documentStore).layers, layerId) || get(busy)) return;
   if (layer.effects.length >= 32) { reportError(new Error('Vrstva může obsahovat nejvýše 32 efektů.')); return; }
-  const other = get(documentStore).layers.find(layer => layer.id !== layerId);
+  const candidates = layerEntries(get(documentStore).layers).map(entry => entry.layer).filter(layer => layer.id !== layerId);
+  const other = candidates.find(candidate => { try { assertLayerGraph(mapLayers(get(documentStore).layers, item => item.id === layerId ? { ...item, effects: [...item.effects, { id: 'candidate', effectId, enabled: true, parameters: {}, inputs: { secondary: candidate.id } }] } : item)); return true; } catch { return false; } });
   const effect: EffectInstance = { id: crypto.randomUUID(), effectId, enabled: true, parameters: validateParameters(definition, {}), inputs: other && definition.inputs.length ? { secondary: other.id } : {} };
   editEffects(layerId, effects => [...effects, effect], 'Přidat efekt'); selectedEffectId.set(effect.id);
 }
 function editEffects(layerId: string, transform: (effects: EffectInstance[]) => EffectInstance[], label: string, mergeKey?: string): void {
-  if (get(busy)) return;
-  commit(label, document => ({ ...document, layers: document.layers.map(layer => layer.id === layerId && !layer.locked ? { ...layer, effects: transform(layer.effects) } : layer) }), mergeKey);
+  if (get(busy) || layerLocked(get(documentStore).layers, layerId)) return;
+  commit(label, document => ({ ...document, layers: mapLayers(document.layers, layer => layer.id === layerId ? { ...layer, effects: transform(layer.effects) } : layer) }), mergeKey);
 }
 export function setEffectEnabled(layerId: string, id: string, enabled: boolean): void { editEffects(layerId, effects => effects.map(effect => effect.id === id ? { ...effect, enabled } : effect), 'Přepnout efekt'); }
 export function deleteEffect(layerId: string, id: string): void { editEffects(layerId, effects => effects.filter(effect => effect.id !== id), 'Odstranit efekt'); }
@@ -117,13 +126,9 @@ export function setEffectParameter(layerId: string, id: string, key: string, val
 }
 export function setEffectInput(layerId: string, id: string, inputId: string, reference: string): void {
   if (reference === layerId) return;
-  // Reject cycles before they reach the renderer.
   const layers = get(documentStore).layers;
-  const reaches = (id: string, seen = new Set<string>()): boolean => {
-    if (id === layerId) return true; if (seen.has(id)) return false; seen.add(id);
-    return layers.find(layer => layer.id === id)?.effects.some(effect => Object.values(effect.inputs).some(ref => reaches(ref, seen))) ?? false;
-  };
-  if (reference && reaches(reference)) { reportError(new Error('Tato reference by vytvořila cyklus.')); return; }
+  try { assertLayerGraph(mapLayers(layers, layer => layer.id === layerId ? { ...layer, effects: layer.effects.map(effect => { if (effect.id !== id) return effect; const inputs = { ...effect.inputs }; if (reference) inputs[inputId] = reference; else delete inputs[inputId]; return { ...effect, inputs }; }) } : layer)); }
+  catch (error) { reportError(error); return; }
   editEffects(layerId, effects => effects.map(effect => {
     if (effect.id !== id) return effect;
     const inputs = { ...effect.inputs }; if (reference) inputs[inputId] = reference; else delete inputs[inputId]; return { ...effect, inputs };
@@ -133,22 +138,46 @@ export function resetEffect(layerId: string, id: string): void {
   editEffects(layerId, effects => effects.map(effect => { const definition = effectRegistry.get(effect.effectId); return effect.id === id && definition ? { ...effect, parameters: validateParameters(definition, {}) } : effect; }), 'Resetovat efekt');
 }
 export function duplicateEffect(layerId: string, id: string): void {
-  const layer = get(documentStore).layers.find(item => item.id === layerId), original = layer?.effects.find(effect => effect.id === id);
-  if (!layer || layer.locked || !original || get(busy)) return;
+  const layer = findLayer(get(documentStore).layers, layerId), original = layer?.effects.find(effect => effect.id === id);
+  if (!layer || layerLocked(get(documentStore).layers, layerId) || !original || get(busy)) return;
   if (layer.effects.length >= 32) { reportError(new Error('Vrstva může obsahovat nejvýše 32 efektů.')); return; }
   const copy = { ...original, id: crypto.randomUUID(), parameters: { ...original.parameters }, inputs: { ...original.inputs } };
   editEffects(layerId, effects => effects.flatMap(effect => effect.id === id ? [effect, copy] : [effect]), 'Duplikovat efekt'); selectedEffectId.set(copy.id);
 }
 export function capturePreset(layerId: string, name: string, effectId?: string): EffectPreset {
-  const document = get(documentStore), layer = document.layers.find(item => item.id === layerId);
+  const document = get(documentStore), layer = findLayer(document.layers, layerId);
   if (!layer) throw new Error('Vyberte vrstvu.');
   return createPreset(name, effectId ? layer.effects.filter(effect => effect.id === effectId) : layer.effects, document.layers);
 }
 export function applyPreset(layerId: string, preset: EffectPreset, bindings: Record<string, string>, replace = false): void {
   if (get(busy) || get(importing)) throw new Error('Počkejte na dokončení operace.');
+  if (layerLocked(get(documentStore).layers, layerId)) throw new Error('Vrstva nebo nadřazená skupina je zamčená.');
   const result = instantiatePreset(preset, get(documentStore).layers, layerId, bindings, replace);
   editEffects(layerId, () => result, replace ? 'Nahradit stack presetem' : 'Použít preset');
   selectedEffectId.set(result.at(-1)?.id ?? null); status.set(`Použit preset: ${preset.name}`);
+}
+export function addGenerator(generatorId: string): void {
+  const definition = generatorRegistry.get(generatorId); if (!definition || get(busy) || get(importing)) return;
+  if (layerEntries(get(documentStore).layers).length >= 100) { reportError(new Error('Maximum je 100 vrstev.')); return; }
+  const layer: LayerNode = { ...layerDefaults(definition.name), type: 'generated', generatorId, parameters: validateParameters(definition, {}) };
+  commit('Přidat generátor', document => ({ ...document, layers: [layer, ...document.layers] })); selectedLayerId.set(layer.id);
+}
+export function setGeneratorParameter(layerId: string, key: string, value: ParameterValue): void {
+  const layers = get(documentStore).layers, layer = findLayer(layers, layerId);
+  if (get(busy) || layerLocked(layers, layerId) || layer?.type !== 'generated') return;
+  const parameter = generatorRegistry.get(layer.generatorId)?.parameters.find(parameter => parameter.id === key); if (!parameter) return;
+  commit('Upravit generátor', document => ({ ...document, layers: mapLayers(document.layers, item => item.id === layerId && item.type === 'generated' ? { ...item, parameters: { ...item.parameters, [key]: validateParameter(parameter, value) } } : item) }), `generator:${layerId}:${key}`);
+}
+export function groupSelectedLayer(id: string): void {
+  const document = get(documentStore), layer = findLayer(document.layers, id);
+  if (!layer || layerLocked(document.layers, id) || get(busy)) return;
+  const group: LayerNode = { ...layerDefaults('Group'), type: 'group', children: [layer] };
+  const next = mapLayers(document.layers, item => item.id === id ? group : item);
+  try { assertLayerGraph(next); commit('Seskupit vrstvu', document => ({ ...document, layers: next })); selectedLayerId.set(group.id); } catch (error) { reportError(error); }
+}
+export function moveLayerToGroup(id: string, parentId: string | null): void {
+  if (get(busy)) return;
+  try { const next = reparentLayer(get(documentStore).layers, id, parentId); commit('Změnit skupinu vrstvy', document => ({ ...document, layers: next })); } catch (error) { reportError(error); }
 }
 export async function saveCurrentProject(saveAs = false): Promise<void> {
   if (get(busy) || get(importing)) return; busy.set(true); errorMessage.set('');
