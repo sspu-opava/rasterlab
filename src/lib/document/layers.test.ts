@@ -29,9 +29,9 @@ it('converts drag vectors through rotated and scaled ancestor coordinates', () =
 });
 it('migrates v1 raster/group documents and validates asset-free v2 generated projects', () => {
   const document = createDocument(64, 48); document.layers = [group([generated()])];
-  const result = ProjectDeserializer.parse(JSON.stringify({ format: 'rasterlab', version: 2, document, assets: [] })); expect(result.version).toBe(2); expect(result.assets).toEqual([]); expect(result.document.layers).toEqual(document.layers);
+  const result = ProjectDeserializer.parse(JSON.stringify({ format: 'rasterlab', version: 2, document, assets: [] })); expect(result.version).toBe(3); expect(result.assets).toEqual([]); expect(result.document.layers).toEqual(document.layers);
   document.layers = [];
-  expect(ProjectDeserializer.parse(JSON.stringify({ format: 'rasterlab', version: 1, document, assets: [] })).version).toBe(2);
+  expect(ProjectDeserializer.parse(JSON.stringify({ format: 'rasterlab', version: 1, document, assets: [] })).version).toBe(3);
   document.layers = [{ ...generated(), generatorId: 'unknown' }]; expect(() => ProjectDeserializer.parse(JSON.stringify({ format: 'rasterlab', version: 2, document, assets: [] }))).toThrow('generátor');
 });
 it('exposes eight generators with validated and serializable parameters', () => {

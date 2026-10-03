@@ -12,7 +12,7 @@
 </script>
 
 <header class="titlebar">
-  <div class="brand"><span class="brand-mark">R</span><strong>RasterLab</strong><span class="version">0.8</span></div>
+  <div class="brand"><span class="brand-mark">R</span><strong>RasterLab</strong><span class="version">0.9</span></div>
   <div class="titlebar-note">EXPERIMENTAL RASTER STUDIO</div>
   <span class="phase-badge">Experimental Effects</span>
 </header>

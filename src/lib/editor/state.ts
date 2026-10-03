@@ -1,7 +1,7 @@
 import { get, writable } from 'svelte/store';
 import { AssetManager } from '../assets/AssetManager';
 import { createDocument, createRasterLayer, layerDefaults } from '../document/factory';
-import type { EffectInstance, LayerNode, RasterDocument } from '../document/types';
+import type { EffectInstance, LayerNode, LayerMask, RasterDocument } from '../document/types';
 import { logError } from '../utils/logger';
 import { CommandHistory } from '../history/CommandHistory';
 import { effectRegistry } from '../effects';
@@ -83,7 +83,7 @@ export function deleteLayer(id: string): void {
   if (!layer || layerLocked(document.layers, id) || get(busy)) return;
   if (layer.type === 'group' && layerEntries(layer.children).some(entry => entry.layer.locked)) { reportError(new Error('Skupina obsahuje zamčené vrstvy.')); return; }
   const removed = new Set([id, ...(layer.type === 'group' ? layerEntries(layer.children).map(entry => entry.layer.id) : [])]);
-  commit('Odstranit vrstvu', document => ({ ...document, layers: mapLayers(removeLayer(document.layers, id), item => ({ ...item, effects: item.effects.map(effect => ({ ...effect, inputs: Object.fromEntries(Object.entries(effect.inputs).filter(([, ref]) => !removed.has(ref))) })) })) }));
+  commit('Odstranit vrstvu', document => ({ ...document, layers: mapLayers(removeLayer(document.layers, id), item => { const result = { ...item, effects: item.effects.map(effect => ({ ...effect, inputs: Object.fromEntries(Object.entries(effect.inputs).filter(([, ref]) => !removed.has(ref))) })) }; if (result.mask && removed.has(result.mask.sourceId)) delete result.mask; return result; }) }));
 }
 export function reorderLayer(id: string, targetId: string): void {
   if (get(busy) || layerLocked(get(documentStore).layers, id)) return;
@@ -174,6 +174,25 @@ export function groupSelectedLayer(id: string): void {
   const group: LayerNode = { ...layerDefaults('Group'), type: 'group', children: [layer] };
   const next = mapLayers(document.layers, item => item.id === id ? group : item);
   try { assertLayerGraph(next); commit('Seskupit vrstvu', document => ({ ...document, layers: next })); selectedLayerId.set(group.id); } catch (error) { reportError(error); }
+}
+export function setLayerMask(id: string, patch: Partial<LayerMask> | null, merge = false): void {
+  const layers = get(documentStore).layers, layer = findLayer(layers, id);
+  if (!layer || get(busy) || layerLocked(layers, id)) return;
+  const mask = patch === null ? undefined : { sourceId: '', enabled: true, mode: 'luminance' as const, invert: false, strength: 1, feather: 0, ...layer.mask, ...patch };
+  if (mask) { mask.strength = Math.max(0, Math.min(1, Number.isFinite(mask.strength) ? mask.strength : 1)); mask.feather = Math.max(0, Math.min(64, Number.isFinite(mask.feather) ? mask.feather : 0)); }
+  const next = mapLayers(layers, item => { if (item.id !== id) return item; const result = { ...item }; if (mask) result.mask = mask; else delete result.mask; return result; });
+  try { assertLayerGraph(next); commit('Upravit masku', document => ({ ...document, layers: next }), merge && patch ? `mask:${id}:${Object.keys(patch).join(',')}` : undefined); } catch (error) { reportError(error); }
+}
+export function duplicateLayer(id: string): void {
+  const layers = get(documentStore).layers, layer = findLayer(layers, id);
+  if (!layer || get(busy) || layerLocked(layers, id)) return;
+  const ids = new Map([layer, ...(layer.type === 'group' ? layerEntries(layer.children).map(entry => entry.layer) : [])].map(item => [item.id, crypto.randomUUID()]));
+  const remap = (ref: string) => ids.get(ref) ?? ref;
+  const clone = (item: LayerNode): LayerNode => ({ ...structuredClone(item), id: ids.get(item.id)!, effects: item.effects.map(effect => ({ ...structuredClone(effect), id: crypto.randomUUID(), inputs: Object.fromEntries(Object.entries(effect.inputs).map(([key, ref]) => [key, remap(ref)])) })), ...(item.mask ? { mask: { ...item.mask, sourceId: remap(item.mask.sourceId) } } : {}), ...(item.type === 'group' ? { children: item.children.map(clone) } : {}) }) as LayerNode;
+  const copy = clone(layer); copy.name = `${layer.name.slice(0, 249)} copy`;
+  const insert = (items: LayerNode[]): LayerNode[] => items.flatMap(item => item.id === id ? [copy, item] : [item.type === 'group' ? { ...item, children: insert(item.children) } : item]);
+  const next = insert(layers);
+  try { assertLayerGraph(next); commit('Duplikovat vrstvu', document => ({ ...document, layers: next })); selectedLayerId.set(copy.id); } catch (error) { reportError(error); }
 }
 export function moveLayerToGroup(id: string, parentId: string | null): void {
   if (get(busy)) return;

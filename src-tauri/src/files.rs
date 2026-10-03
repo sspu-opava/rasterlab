@@ -41,7 +41,7 @@ fn manifest(json: &str) -> Result<Manifest, String> {
     }
     let manifest: Manifest = serde_json::from_str(json).map_err(|e| e.to_string())?;
     if manifest.format != "rasterlab"
-        || ![1, 2].contains(&manifest.version)
+        || ![1, 2, 3].contains(&manifest.version)
         || manifest.assets.len() > 100
     {
         return Err("Nepodporovaný formát projektu.".into());
@@ -243,7 +243,7 @@ mod tests {
     use super::*;
     #[test]
     fn rejects_traversal_and_future_versions() {
-        assert!(manifest(r#"{"format":"rasterlab","version":3,"assets":[]}"#).is_err());
+        assert!(manifest(r#"{"format":"rasterlab","version":4,"assets":[]}"#).is_err());
         assert!(manifest(r#"{"format":"rasterlab","version":1,"assets":[{"id":"a","mimeType":"image/png","file":"../secret.png"}]}"#).is_err());
     }
     #[test]
@@ -295,6 +295,30 @@ mod tests {
             .into_owned();
         let json = r#"{"format":"rasterlab","version":2,"document":{"layers":[{"type":"generated","generatorId":"checker","parameters":{"cellSize":32}}]},"assets":[]}"#;
         save_project(path.clone(), json.into(), vec![]).unwrap();
+        let loaded = load_project(path).unwrap();
+        assert_eq!(loaded.project_json, json);
+        assert!(loaded.assets.is_empty());
+        fs::remove_dir_all(directory).unwrap();
+    }
+    #[test]
+    fn masked_v3_roundtrip_rejects_future_without_overwrite() {
+        let directory = std::env::temp_dir().join(format!(
+            "rasterlab-v3-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        let path = directory.join("masked.json").to_string_lossy().into_owned();
+        let json = r#"{"format":"rasterlab","version":3,"document":{"layers":[{"id":"target","type":"generated","generatorId":"noise","mask":{"sourceId":"source","enabled":true,"mode":"alpha","invert":false,"strength":1,"feather":8}},{"id":"source","type":"generated","generatorId":"checker"}]},"assets":[]}"#;
+        save_project(path.clone(), json.into(), vec![]).unwrap();
+        assert!(save_project(
+            path.clone(),
+            json.replace("\"version\":3", "\"version\":4"),
+            vec![]
+        )
+        .is_err());
         let loaded = load_project(path).unwrap();
         assert_eq!(loaded.project_json, json);
         assert!(loaded.assets.is_empty());

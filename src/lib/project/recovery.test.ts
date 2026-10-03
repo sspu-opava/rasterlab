@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { validateRecovery, type RecoverySnapshot } from './recovery';
 import { createDocument } from '../document/factory';
 import { CommandHistory } from '../history/CommandHistory';
-const snapshot = (): RecoverySnapshot => ({ format: 'rasterlab-recovery', version: 1, writtenAt: new Date().toISOString(), path: null, project: { format: 'rasterlab', version: 2, document: createDocument(), assets: [] }, blobs: {} });
+const snapshot = (): RecoverySnapshot => ({ format: 'rasterlab-recovery', version: 1, writtenAt: new Date().toISOString(), path: null, project: { format: 'rasterlab', version: 3, document: createDocument(), assets: [] }, blobs: {} });
 it('validates recovery envelope and embedded originals before replacing a document', () => {
   const record = snapshot(); expect(validateRecovery(record).project.document.id).toBe(record.project.document.id);
   record.project.assets.push({ id: 'image', name: 'test.png', width: 1, height: 1, mimeType: 'image/png', file: 'assets/image.png' });

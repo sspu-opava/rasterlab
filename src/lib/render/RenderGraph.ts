@@ -15,7 +15,7 @@ export class RenderGraph {
       const sourceId = `${layer.id}:source`;
       const dependencies = layer.type === 'group' ? layer.children.map(visit) : [];
       if (layer.type === 'generated') { const generatedId = `${layer.id}:generated`; next.set(generatedId, { id: generatedId, kind: 'source', dependencies: [], signature: JSON.stringify([layer.generatorId, layer.parameters]) }); dependencies.push(generatedId); }
-      const { effects, ...source } = layer;
+      const { effects, mask, ...source } = layer;
       next.set(sourceId, { id: sourceId, kind: layer.type === 'group' ? 'group' : 'source', dependencies, signature: JSON.stringify(source) });
       let previous = sourceId;
       for (const effect of effects) {
@@ -23,6 +23,14 @@ export class RenderGraph {
         previous = effect.id;
       }
       const outputId = `${layer.id}:output`;
+      if (mask) {
+        const field = `${layer.id}:mask-field`, x = `${layer.id}:mask-x`, y = `${layer.id}:mask-y`, applied = `${layer.id}:mask`;
+        next.set(field, { id: field, kind: 'effect', dependencies: [`${mask.sourceId}:output`], signature: mask.mode });
+        next.set(x, { id: x, kind: 'effect', dependencies: [field], signature: String(mask.feather) });
+        next.set(y, { id: y, kind: 'effect', dependencies: [x], signature: String(mask.feather) });
+        next.set(applied, { id: applied, kind: 'effect', dependencies: [previous, y], signature: JSON.stringify(mask) });
+        previous = applied;
+      }
       next.set(outputId, { id: outputId, kind: 'composite', dependencies: [previous], signature: layer.id });
       return outputId;
     };

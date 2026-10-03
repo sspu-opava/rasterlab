@@ -10,6 +10,7 @@ import { RenderTargetPool } from './RenderTargetPool';
 import type { RenderMode } from './RenderGraph';
 import { logError } from '../utils/logger';
 import { generatorRegistry } from '../generators';
+import { maskField, maskBlur, maskApply } from './mask';
 
 /** Evaluates document-space nodes independently of the editor viewport. */
 export class GraphRenderer {
@@ -18,6 +19,7 @@ export class GraphRenderer {
   private targets = new Map<string, RenderTexture>();
   private effects = new Map<string, { effectId: string; renderer: EffectRenderer }>();
   private generators = new Map<string, { generatorId: string; renderer: EffectRenderer }>();
+  private masks = new Map<string, { field: EffectRenderer; blur: EffectRenderer; apply: EffectRenderer }>();
   private contextKey = '';
   readonly errors = new Map<string, string>();
   constructor(private renderer: Renderer, private assets: AssetManager) {}
@@ -109,6 +111,30 @@ export class GraphRenderer {
             this.errors.set(instance.id, message);
           }
         }
+        if (layer.mask?.enabled) {
+          const maskId = `${id}:mask`, mask = layer.mask;
+          try {
+            const secondary = evaluateLayer(mask.sourceId);
+            if (!this.graph.dirty.has(maskId) && this.targets.has(maskId) && !this.errors.has(maskId)) input = this.targets.get(maskId)!;
+            else {
+              let runtime = this.masks.get(id);
+              if (!runtime) { runtime = { field: maskField.createRenderer(context), blur: maskBlur.createRenderer(context), apply: maskApply.createRenderer(context) }; this.masks.set(id, runtime); }
+              const pass = (nodeId: string, texture: Texture, effect: EffectRenderer) => {
+                const sprite = new Sprite(texture); sprite.filterArea = new Rectangle(0, 0, document.width, document.height); sprite.filters = [effect.filter!];
+                try { return draw(nodeId, sprite); } finally { sprite.filters = []; sprite.destroy(); }
+              };
+              runtime.field.update({ mode: mask.mode === 'alpha' ? 0 : 1 }, context);
+              let field = pass(`${id}:mask-field`, secondary, runtime.field);
+              if (mask.feather > 0) {
+                runtime.blur.update({ radius: mask.feather, vertical: 0 }, context); field = pass(`${id}:mask-x`, field, runtime.blur);
+                runtime.blur.update({ radius: mask.feather, vertical: 1 }, context); field = pass(`${id}:mask-y`, field, runtime.blur);
+              }
+              runtime.apply.update({ invert: mask.invert ? 1 : 0, strength: mask.strength }, { ...context, secondary: field });
+              input = pass(maskId, input, runtime.apply);
+            }
+            this.errors.delete(maskId);
+          } catch (error) { const message = error instanceof Error ? error.message : 'Maska selhala.'; if (this.errors.get(maskId) !== message) logError('EFFECT', message, error); this.errors.set(maskId, message); }
+        } else this.errors.delete(`${id}:mask`);
         outputs.set(id, input); return input;
       } finally { visiting.delete(id); }
     };
@@ -123,10 +149,12 @@ export class GraphRenderer {
     for (const [id, texture] of this.targets) if (!this.graph.nodes.has(id)) { this.pool.release(texture); this.targets.delete(id); }
     for (const [id, runtime] of this.effects) if (!this.graph.nodes.has(id)) { runtime.renderer.destroy(); this.effects.delete(id); this.errors.delete(id); }
     for (const [id, runtime] of this.generators) if (!this.graph.nodes.has(`${id}:generated`)) { runtime.renderer.destroy(); this.generators.delete(id); this.errors.delete(id); }
+    for (const [id, runtime] of this.masks) if (!this.graph.nodes.has(`${id}:mask`)) { runtime.field.destroy(); runtime.blur.destroy(); runtime.apply.destroy(); this.masks.delete(id); this.errors.delete(`${id}:mask`); }
     this.graph.markClean(); return result;
   }
   clear(): void {
     for (const runtime of this.effects.values()) runtime.renderer.destroy();
+    for (const runtime of this.masks.values()) { runtime.field.destroy(); runtime.blur.destroy(); runtime.apply.destroy(); } this.masks.clear();
     for (const runtime of this.generators.values()) runtime.renderer.destroy(); this.generators.clear();
     this.effects.clear(); this.targets.clear(); this.pool.clear(); this.errors.clear(); this.graph = new RenderGraph();
   }

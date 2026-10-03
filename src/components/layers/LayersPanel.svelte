@@ -6,6 +6,8 @@
   import { layerEntries, findLayer } from '../../lib/document/layers';
   import { generatorRegistry } from '../../lib/generators';
   import EffectParameters from '../effects/EffectParameters.svelte';
+  import MaskProperties from './MaskProperties.svelte';
+  import { duplicateLayer } from '../../lib/editor/store';
   import type { BlendMode } from '../../lib/document/types';
   let tab = $state<'layers' | 'effects'>('layers');
   let draggedId = $state<string | null>(null);
@@ -33,7 +35,8 @@
         <IconButton label="Posunout vrstvu nahoru" disabled={!layer || layer.locked || siblings[0]?.id === layer.id} onclick={() => move(-1)}><ChevronUp size={16}/></IconButton>
         <IconButton label="Posunout vrstvu dolů" disabled={!layer || layer.locked || siblings.at(-1)?.id === layer.id} onclick={() => move(1)}><ChevronDown size={16}/></IconButton>
         <IconButton label="Odstranit vybranou vrstvu" disabled={!layer || layer.locked} onclick={() => { if (layer) deleteLayer(layer.id); }}><Trash2 size={16}/></IconButton>
-        <IconButton label="Seskupit vybranou vrstvu" disabled={!layer || layer.locked} onclick={() => { if (layer) groupSelectedLayer(layer.id); }}><Layers size={16}/></IconButton><span class="layer-tool-label">Vrstvy a skupiny</span>
+        <IconButton label="Seskupit vybranou vrstvu" disabled={!layer || layer.locked} onclick={() => { if (layer) groupSelectedLayer(layer.id); }}><Layers size={16}/></IconButton>
+        <IconButton label="Duplikovat vybranou vrstvu nebo skupinu" disabled={!layer || layer.locked} onclick={() => { if (layer) duplicateLayer(layer.id); }}><Layers size={16}/><span>+</span></IconButton>
       </div>
       <div class="layer-list">
         {#if $documentStore.layers.length === 0}
@@ -75,6 +78,7 @@
           <button class="small-button reset-transform" disabled={layer.locked} onclick={() => updateLayer(layer!.id, { position: { x: 0, y: 0 }, scale: { x: 1, y: 1 }, rotation: 0 })}>Reset</button>
         </div>
         {#if layer.type === 'generated' && generator}<div class="property-divider">GENERÁTOR · {generator.name}</div><EffectParameters definition={generator} instance={{ id: layer.id, effectId: layer.generatorId, enabled: true, inputs: {}, parameters: layer.parameters }} {layer} layers={entries.map(entry => entry.layer)} onparameter={(key, value) => setGeneratorParameter(layer!.id, key, value)}/>{/if}
+        <MaskProperties {layer} layers={$documentStore.layers}/>
         {#if layer.locked}<p class="locked-note"><UnlockKeyhole size={13}/> Pro úpravy vrstvu nejprve odemkněte.</p>{/if}
       </div>
     {:else}

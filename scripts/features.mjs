@@ -77,7 +77,7 @@ try {
 
   const pendingSave = page.waitForEvent('download'); await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click();
   const projectDownload = await pendingSave; const saved = await readFile(await projectDownload.path()); const project = JSON.parse(saved);
-  assert.equal(project.format, 'rasterlab'); assert.equal(project.version, 2); assert.equal(project.document.layers[0].effects.length, 5); assert(project.assets[0].dataUrl.startsWith('data:image/png;base64,'));
+  assert.equal(project.format, 'rasterlab'); assert.equal(project.version, 3); assert.equal(project.document.layers[0].effects.length, 5); assert(project.assets[0].dataUrl.startsWith('data:image/png;base64,'));
   assert(!project.document.layers[0].texture && project.document.layers[0].assetId === project.assets[0].id);
   await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click(); await page.getByRole('dialog').getByRole('checkbox').check(); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
   await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'roundtrip.json', mimeType: 'application/json', buffer: saved });

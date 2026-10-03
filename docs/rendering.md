@@ -1,4 +1,4 @@
-# Vykreslování 0.8
+# Vykreslování 0.9
 
 DocumentRenderEngine inicializuje PixiJS 8 Application s `preference: 'webgl'`. Ticker je vypnutý a UI změny se slučují přes requestAnimationFrame. Editorový canvas má maximálně 2× density; rozměry dokumentu jsou samostatné.
 
@@ -15,6 +15,8 @@ Editor zobrazuje finální document texture na checkerboardu, transformovanou po
 Export vytváří samostatný final GraphRenderer, vykreslí kompletní dokument a extrahuje přesně width × height. Checkerboard a border jsou pouze UI objekty. PNG/WebP zachovávají alpha; JPEG se skládá na bílý Canvas před encodingem. Chyba aktivního efektu zastaví export; preview ponechá vstup a vrátí error map do panelu. Preview/final nyní mají stejné rozlišení; budoucí preview scaling patří do context/render adapteru.
 
 Shader helper používá explicitní GLSL ES 3.00 pro správné 8bit bitové XOR/AND/OR/NAND operace. Vstupy jsou premultiplied; barevné efekty počítají straight RGB a výstup znovu premultiplikují. Float uniformy se mapují z deklarovaných metadat. Distortion parametry se měří v document-space pixelech, nikoli viewportu.
+
+Maska se aplikuje za effect stackem, před krytím/blendem. Nejprve se ze zdroje získá alfa nebo luminance straight RGB násobená alfa. Volitelné změkčení tvoří dva 17vzorkové směrové průchody Gaussova jádra s poloměrem 0–64 dokumentových px. Mimo dokument jsou vzorky nulové. Potom se aplikuje invert a síla; výsledný faktor násobí všechny premultiplied RGBA složky cíle. Skryté zdroje fungují, maska skupiny je za efekty skupiny. Graf invaliduje masku a následníky při změně zdroje; její chyba blokuje export a v náhledu zachová nemaskovaný vstup s diagnostikou.
 
 Tauri CSP zůstává bez unsafe-eval. `pixi.js/unsafe-eval` je Pixi modul používající statické funkce bez eval. Rozšířené blend módy registruje `pixi.js/advanced-blend-modes`. Produkční browser test aplikuje tutéž CSP jako Tauri a kontroluje skutečné exportované pixely.
 

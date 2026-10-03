@@ -1,5 +1,6 @@
 export interface RGBAColor { r: number; g: number; b: number; a: number }
 export interface Point { x: number; y: number }
+export interface LayerMask { sourceId: string; enabled: boolean; mode: 'alpha' | 'luminance'; invert: boolean; strength: number; feather: number }
 export type BlendMode = 'normal' | 'multiply' | 'screen' | 'overlay' | 'difference' | 'add';
 export interface EffectInstance {
   id: string;
@@ -20,6 +21,7 @@ export interface LayerBase {
   blendMode: BlendMode;
   effects: EffectInstance[];
   maskId?: string;
+  mask?: LayerMask;
 }
 export interface RasterLayer extends LayerBase { type: 'raster'; assetId: string }
 export interface GroupLayer extends LayerBase { type: 'group'; children: LayerNode[] }

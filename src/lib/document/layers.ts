@@ -17,7 +17,7 @@ export function removeLayer(layers: LayerNode[], id: string): LayerNode[] { retu
 export function assertLayerGraph(layers: LayerNode[]): void {
   const entries = layerEntries(layers);
   if (entries.length > 100 || entries.some(entry => entry.depth > 12)) throw new Error('Maximum je 100 vrstev a 12 úrovní vnoření.');
-  const edges = new Map(entries.map(({ layer }) => [layer.id, [...layer.effects.flatMap(effect => Object.values(effect.inputs)), ...(layer.type === 'group' ? layer.children.map(child => child.id) : [])]]));
+  const edges = new Map(entries.map(({ layer }) => [layer.id, [...layer.effects.flatMap(effect => Object.values(effect.inputs)), ...(layer.mask ? [layer.mask.sourceId] : []), ...(layer.type === 'group' ? layer.children.map(child => child.id) : [])]]));
   const active = new Set<string>(), done = new Set<string>();
   const visit = (id: string): void => { if (active.has(id)) throw new Error('Tato operace by vytvořila cyklus vrstev.'); if (done.has(id)) return; if (!edges.has(id)) throw new Error('Chybí vstupní vrstva.'); active.add(id); for (const next of edges.get(id)!) visit(next); active.delete(id); done.add(id); };
   for (const id of edges.keys()) visit(id);

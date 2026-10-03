@@ -5,3 +5,4 @@
 .recovery-banner{display:flex;align-items:center;gap:12px;background:#253a55;border-bottom:1px solid #45648b;padding:8px 15px;flex-shrink:0;flex-wrap:wrap}.recovery-banner>span{flex:1}.recovery-banner .small-button{font-size:10px}.recovery-status{position:fixed;bottom:5px;right:215px;color:#8eabc9;font-size:9px;max-width:350px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none}
 .effect-add .icon-button:last-child{background:transparent;border-color:transparent;color:#9caec5}.effect-add .icon-button:last-child.active{background:#263a53;border-color:#375578;color:#ffd17c}.effect-search .icon-button.active{color:#ffd17c}
 .group-toggle[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.mask-toggles { display: flex; gap: 20px; font-size: 11px; margin: 12px 0; } .mask-toggles label { display: flex; align-items: center; gap: 6px; }

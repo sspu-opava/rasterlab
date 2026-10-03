@@ -55,7 +55,7 @@ export function instantiatePreset(preset: EffectPreset, layers: LayerNode[], tar
   for (const role of preset.roles) if (!all.some(layer => layer.id === bindings[role.id]) || bindings[role.id] === targetId) throw new Error(`Vyberte vstupní vrstvu pro „${role.label}“.`);
   const instances = preset.effects.map(effect => ({ id: crypto.randomUUID(), effectId: effect.effectId, enabled: effect.enabled, parameters: { ...effect.parameters }, inputs: Object.fromEntries(Object.entries(effect.inputs).map(([input, role]) => [input, bindings[role]])) }));
   const result = replace ? instances : [...target.effects, ...instances]; if (result.length > 32) throw new Error('Vrstva může obsahovat nejvýše 32 efektů.');
-  const edges = new Map(all.map(layer => [layer.id, [...(layer.id === targetId ? result : layer.effects).flatMap(effect => Object.values(effect.inputs)), ...(layer.type === 'group' ? layer.children.map(child => child.id) : [])]]));
+  const edges = new Map(all.map(layer => [layer.id, [...(layer.id === targetId ? result : layer.effects).flatMap(effect => Object.values(effect.inputs)), ...(layer.mask ? [layer.mask.sourceId] : []), ...(layer.type === 'group' ? layer.children.map(child => child.id) : [])]]));
   const active = new Set<string>(), done = new Set<string>();
   const visit = (id: string): void => { if (active.has(id)) throw new Error('Toto přiřazení vstupů by vytvořilo cyklus.'); if (done.has(id)) return; if (!edges.has(id)) throw new Error('Chybí vstupní vrstva.'); active.add(id); for (const ref of edges.get(id)!) visit(ref); active.delete(id); done.add(id); };
   for (const id of edges.keys()) visit(id);
