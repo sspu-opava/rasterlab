@@ -33,4 +33,4 @@ Reaction Diffusion používá periodické hranice, Eulerův krok 1, diffusion U=
 
 Generativní moduly nyní pracují jako efekty bitmapové vrstvy. Samostatné GeneratedLayer renderery zůstávají pro další fázi. Reálné GPU náklady rostou s rozlišením a počtem průchodů; Fragment Scatter navíc porovnává nepravidelné buňky pro každý fragment.
 
-Z původního katalogu zbývají Channel Algebra, Recursive Collage, Cellular Growth, Databend, Echo Frames a Signal Collapse. Celkových 42 modulů zahrnuje také základní efekty editoru a samostatné AND/OR/NAND varianty.
+V této verzi zbývalo z původního katalogu šest efektů; byly doplněny v [RasterLabu 0.6](effects-0.6.md). Celkových 42 modulů verze 0.5 zahrnuje také základní efekty editoru a samostatné AND/OR/NAND varianty.

@@ -3,7 +3,7 @@ import type { RenderContext } from '../../render/RenderGraph';
 export type ParameterValue = number | string | boolean | null;
 export interface EffectParameterDefinition {
   id: string; label: string;
-  type: 'float' | 'integer' | 'boolean' | 'select' | 'color' | 'seed' | 'layer';
+  type: 'float' | 'integer' | 'boolean' | 'select' | 'color' | 'seed' | 'layer' | 'text';
   default: ParameterValue; min?: number; max?: number; step?: number;
   options?: { value: string; label: string }[];
 }

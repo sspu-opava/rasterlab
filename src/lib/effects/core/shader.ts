@@ -28,7 +28,7 @@ export function shaderEffect(specification: Omit<EffectDefinition, 'createRender
     ...metadata, version: '1.0.0', inputs: metadata.inputs ?? [],
     createRenderer(context) {
       const generated = data?.create();
-      const declarations = definition.parameters.filter(parameter => !['layer', 'color'].includes(parameter.type)).map(parameter => `uniform float p_${parameter.id};`).join('\n');
+      const declarations = definition.parameters.filter(parameter => !['layer', 'color', 'text'].includes(parameter.type)).map(parameter => `uniform float p_${parameter.id};`).join('\n');
       const fragment = `#version 300 es
 precision highp float;
 in vec2 vTextureCoord;
@@ -55,7 +55,7 @@ void main() {
 }`;
       const uniforms: Record<string, ShaderUniform> = { ...generated?.uniforms, uSize: { value: new Float32Array([context.width, context.height]), type: 'vec2<f32>' } };
       for (const parameter of definition.parameters) {
-        if (!['layer', 'color'].includes(parameter.type)) uniforms[`p_${parameter.id}`] = { value: 0, type: 'f32' };
+        if (!['layer', 'color', 'text'].includes(parameter.type)) uniforms[`p_${parameter.id}`] = { value: 0, type: 'f32' };
       }
       const group = new UniformGroup(uniforms);
       const filter = Filter.from({ gl: { vertex, fragment, name: definition.id }, resources: { effectUniforms: group, uSecondary: (context.secondary ?? Texture.EMPTY).source }, resolution: 1, padding: 0, clipToViewport: false });

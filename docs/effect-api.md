@@ -1,4 +1,4 @@
-# Effect API 0.5
+# Effect API 0.6
 
 Nový efekt je samostatný modul. Definujte metadata a renderer, potom zavolejte `effectRegistry.register(definition)` v `src/lib/effects/index.ts`. UI si automaticky vytvoří nabídku a ovládací prvky. Neupravujte Svelte komponenty pro nový efekt.
 
@@ -17,7 +17,7 @@ interface EffectDefinition {
 
 Renderer má buď `filter: Filter`, nebo `render(input: Texture, output: RenderTexture, renderer: Renderer): void`; obě varianty mají `update(parameters, context)` a `destroy()`. Runtime vlastní GPU objekty, nikdy je neukládejte do EffectInstance. Context má `width`, `height`, `mode: 'preview' | 'final'` a případný `secondary: Texture`. Efekt musí fungovat v offscreen dokumentovém renderu, nikoliv ve viewportových souřadnicích. `update` opakovaně používá existující renderer. Pro jiný backend bude továrna moci vytvořit jiný Pixi program.
 
-Parametr deklaruje `id`, `label`, `type`, `default`, případně `min`, `max`, `step` a `options: {value,label}[]`. Podporované UI/validační typy jsou float, integer, boolean, select, color (`#rrggbb`), seed a layer (reference ID nebo null). Numeric validace odmítá NaN/Infinity, omezuje meze a zaokrouhluje integer/seed. `validateParameters` zahazuje nedefinované klíče a doplní výchozí hodnoty.
+Parametr deklaruje `id`, `label`, `type`, `default`, případně `min`, `max`, `step` a `options: {value,label}[]`. Podporované UI/validační typy jsou float, integer, boolean, select, color (`#rrggbb`), seed, text a layer (reference ID nebo null). Numeric validace odmítá NaN/Infinity, omezuje meze a zaokrouhluje integer/seed. Text přijímá řetězce do 256 znaků; další obsahovou validaci provádí renderer. `validateParameters` zahazuje nedefinované klíče a doplní výchozí hodnoty. Textové pole potvrzuje změnu při opuštění, Enter i před Ctrl+S; každé potvrzení uzavře krok historie.
 
 `EffectInstance` má vlastní UUID, ID definice, enabled, parameters a inputs. Dva výskyty stejné definice mají nezávislý runtime. Registry umí register/unregister/get/list/listByCategory a odmítá duplicity.
 
@@ -36,7 +36,7 @@ export const invert = shaderEffect({
 
 Potom modul importujte a registrujte v `effects/index.ts`. `shaderEffect` poskytuje GLSL 3 vertex shader, input sampler, uniformy a statický Pixi adapter. Tělo běží v main, má `uv` (0–1 v dokumentu), `source` (premultiplied RGBA), `color` (straight RGB), `uSize` a `p_<parameterId>`. Používejte `sampleImage(uv)` pro pixelový vstup a transparentní okraje. Funkce `straight`, `luminance`, `hash` jsou společné. Výstup `finalColor` musí být premultiplied RGBA.
 
-Helper automaticky mapuje float/integer/seed na float uniform, boolean na 0/1 a select na index možnosti. Pro vlastní color/layer parametry nebo složitější GPU zdroje implementujte `createRenderer` přímo; obecné UI a validace je podporují, shader helper pro ně uniformy automaticky nevytváří.
+Helper automaticky mapuje float/integer/seed na float uniform, boolean na 0/1 a select na index možnosti. Pro vlastní color/layer/text parametry nebo složitější GPU zdroje implementujte `createRenderer` přímo; obecné UI a validace je podporují, shader helper pro ně uniformy automaticky nevytváří.
 
 ## Více vstupů a seed
 
@@ -63,5 +63,7 @@ Při každém zneplatnění uzlu začne initialize z původního vstupu. Výsled
 Pixel Sort používá počet průchodů rovný velikosti intervalu a skutečnou odd-even transposition sort. Feedback opakovaně transformuje předchozí výstup. Reaction Diffusion má seedovanou inicializaci U/V, čtyřsousední laplacián a Gray–Scott reakční člen. Nové efekty mají pixelové integrační testy v `scripts/expansion.mjs`.
 
 ## Testování a chyby
+
+Channel Algebra používá samostatný parser `boolean/expressions.ts`. Povolené kanály, operátory a funkce překládá do scalar GLSL; nepoužívá eval ani nepropouští libovolný shaderový kód. Limity zahrnují délku 256 znaků, 128 tokenů a hloubku parsování 32. Dělení s téměř nulovým jmenovatelem vrací nulu. Renderer při změně trojice výrazů vytvoří nový program a teprve po úspěchu zničí předchozí. Změna normalizace nebo alpha pouze aktualizuje uniformy. Chybný výraz vyhodí čitelnou chybu; graf provede běžný bypass a uživatel může výraz opravit nebo vrátit undo. Parser ověřují unit testy, GPU chování a obnovu `scripts/remaining.mjs`.
 
 Přidejte testy validace a algoritmu. Ověřte skutečný shader také v `scripts/features.mjs`, včetně exportu, průhlednosti a případného secondary vstupu. Spusťte check, unit tests, build a produkční browser test s CSP Tauri. Neznámá definice z projektu se zachová, v panelu se dá vypnout/odstranit a zobrazuje diagnostiku. Vyhozená chyba rendereru má ponechat input; export chybu oznámí a nepřipraví nesprávný soubor.

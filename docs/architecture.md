@@ -1,4 +1,4 @@
-# Architektura RasterLabu 0.5
+# Architektura RasterLabu 0.6
 
 ```text
 Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
@@ -16,7 +16,7 @@ AssetManager vlastní originální Blob, object URL, dekódovaný obraz a lazy T
 
 ## Efekty
 
-Efekty mají nezávislou definici a instance. Registry, validace a renderer API jsou v `effects/core`, moduly v `color`, `distortion`, `generative`, `boolean`. UI čte metadata; není v něm seznam konkrétních efektů ani shaderové algoritmy. `createRenderer` vytváří persistentní runtime, `update` pouze mění uniformy a vstupy. Registruje se interní kód, žádné externí JS pluginy se nenačítají.
+Efekty mají nezávislou definici a instance. Registry, validace a renderer API jsou v `effects/core`, moduly v `color`, `distortion`, `generative`, `boolean`, `collage` a `material`. UI čte metadata; není v něm seznam konkrétních efektů ani shaderové algoritmy. `createRenderer` vytváří persistentní runtime, `update` obvykle mění uniformy a vstupy. Channel Algebra překládá omezené textové výrazy do GLSL a při jejich změně vymění svůj program. Registruje se interní kód, žádné externí JS pluginy se nenačítají.
 
 Sekundární vstup je post-effect obsah druhé vrstvy v dokumentových souřadnicích, před krytím/blendem vrstvy. Reference může použít i skrytou vrstvu. Store a deserializer odmítají cykly; renderer má ještě vlastní ochranu. Selhání jednotlivého efektu vrací jeho nezměněný vstup, loguje diagnostiku a označí efekt v panelu. Export při chybě aktivního efektu skončí čitelnou chybou.
 

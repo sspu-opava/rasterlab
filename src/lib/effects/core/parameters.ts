@@ -1,5 +1,6 @@
 import type { EffectDefinition, EffectParameterDefinition, ParameterValue } from './types';
 export function validateParameter(parameter: EffectParameterDefinition, value: unknown): ParameterValue {
+  if (parameter.type === 'text') return typeof value === 'string' && value.length <= 256 ? value : parameter.default;
   if (parameter.type === 'boolean') return typeof value === 'boolean' ? value : parameter.default;
   if (parameter.type === 'select') return parameter.options?.some(option => option.value === value) ? value as string : parameter.default;
   if (parameter.type === 'layer') return typeof value === 'string' ? value : null;

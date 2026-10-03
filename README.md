@@ -1,6 +1,6 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.5 nabízí 42 efektů, včetně skutečného Pixel Sort, iterativního Feedback a Gray–Scott Reaction Diffusion. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.6 nabízí 48 efektů a pokrývá všechny položky `katalog.md`, včetně skutečného Pixel Sort, iterativního Feedback, Channel Algebra a Cellular Growth. Rozhraní vychází z `gui/gui-navrh.png`.
 
 ## Spuštění
 
@@ -20,13 +20,14 @@ npm run test:browser # při běžícím dev serveru; jednou: npx playwright inst
 npm run test:features
 npm run test:catalog # produkční preview na portu 4173
 npm run test:expansion # dalších 20 efektů; stejné produkční preview
+npm run test:remaining # posledních 6 katalogových efektů; stejné preview
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 npm run desktop:build
 ```
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.5.0.exe` a `releases/RasterLab-0.5.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
+Připravené distribuční soubory této iterace: `releases/RasterLab-0.6.0.exe` a `releases/RasterLab-0.6.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -47,6 +48,7 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 - Ink Bleed a Surface Relief: šíření tmavého inkoustu uvnitř obrazu a osvětlení luminanční výškové mapy.
 - Contour Atlas, Scanline Displace a Modulo Mix: jasové vrstevnice, seedované posuny řádků a modulo kombinace dvou vrstev.
 - Dalších 20 efektů v 0.5: [seznam a ovládání](docs/effects-0.5.md). Nová víceprůchodová API větev využívá dvě opakovaně používané GPU textury.
+- Zbývajících šest v 0.6: Channel Algebra, Recursive Collage, Echo Frames, Cellular Growth, Databend a Signal Collapse; [ovládání a příklady](docs/effects-0.6.md).
 - Automatické UI parametrů, vícenásobné instance, změna pořadí přetažením nebo šipkami, reset a Before/After bypass.
 - Více vstupů odkazem na jinou vrstvu; ochrana proti cyklům a izolace chyb efektu.
 - Uložení, Uložit jako a otevření verzovaného projektu včetně originálních obrázků.
@@ -72,6 +74,6 @@ Desktop ukládá zvolený `.json` a vedle něj adresář `assets/`. Přenášejt
 
 Historie uchovává nejvýše 200 příkazů, nepersistuje se v projektu a při otevření/novém dokumentu se resetuje. Neznámý nebo selhávající efekt zachová v náhledu svůj vstup a zobrazí diagnostiku; export se při chybě aktivního efektu přeruší.
 
-Další iterace: UI skupin, masky, generátorové vrstvy a další efekty z katalogu. Interference nyní moduluje jas bitmapové vrstvy; samostatné generátorové vrstvy ještě nejsou implementovány. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
+Další iterace: UI skupin, masky a generátorové vrstvy. Generativní efekty nyní pracují s bitmapovou vrstvou; samostatné generátorové vrstvy ještě nejsou implementovány. Vícevstupové efekty používají dvě vrstvy. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
 
 Podrobnosti: [architektura](docs/architecture.md), [Effect API](docs/effect-api.md), [projektový formát](docs/project-format.md), [vykreslování](docs/rendering.md), [ověření](docs/validation.md).

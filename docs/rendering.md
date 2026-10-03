@@ -1,4 +1,4 @@
-# Vykreslování 0.5
+# Vykreslování 0.6
 
 DocumentRenderEngine inicializuje PixiJS 8 Application s `preference: 'webgl'`. Ticker je vypnutý a UI změny se slučují přes requestAnimationFrame. Editorový canvas má maximálně 2× density; rozměry dokumentu jsou samostatné.
 
@@ -23,3 +23,5 @@ Voronoi Collage používá nejvýše 32 seedovaných center; dvojice center defi
 Víceprůchodový efekt dostává vlastní output target a udržuje dva pomocné RenderTexture objekty. Na každé zneplatnění začíná initialize z původního vstupu, poté střídá read/write targety a finish zapisuje výsledek. Vstupní textury se nikdy nepřepisují. Změna rozměrů a destroy uvolní pomocné targety. Cache čistých uzlů a export používají tuto větev stejně jako jednotlivé filtry.
 
 Pixel Sort provádí odd-even transposition sorting, jeden sousední compare/swap na průchod. Parametr interval 2–64 určuje délku segmentu i počet průchodů; threshold a nulová alpha tvoří bariéry. Feedback transformuje předchozí obraz a míchá jej s původním vstupem. Reaction Diffusion aktualizuje U/V přes čtyřsousední laplacián a Gray–Scott reakční člen; používá periodické hranice a standardní RGBA8 targety. Žádný z těchto algoritmů neakumuluje stav napříč změnami sliderů nebo exporty.
+
+Recursive Collage v každém kroku transformuje výsledek předchozího kroku a skládá jej přes původní obraz metodou source-over. Cellular Growth uchovává binární buňky a procedurální substrát v RG kanálech, rozšiřuje živé buňky přes osm sousedů a periodické hranice a při finish obnoví alpha původní bitmapy. Echo Frames skládá transformované kopie původního obrazu v jednom shaderu. Databend mapuje lineární proud pixelů celočíselně, takže ani dokument 8192 × 8192 neztrácí přesnost adres přes limit float. Signal Collapse kombinuje seedovaný posun, kvantizaci, bitové masky a výpadky kanálů; nepoškozuje původní soubor.
