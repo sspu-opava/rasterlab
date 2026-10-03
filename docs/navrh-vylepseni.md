@@ -2,7 +2,7 @@
 
 Datum: 3. 10. 2026. Výchozí verze: 0.6. Tento dokument je návrh, nikoli seznam hotových funkcí nebo závazný harmonogram.
 
-Realizace v 0.7: hledání a oblíbené efekty, duplikace, kopírování stacků, uživatelské a ukázkové presety s přenosným formátem a automatická zotavovací kopie. Podrobnosti v [návodu 0.7](workflow-0.7.md). Realizace v 0.8: osm generátorových vrstev, rekurzivní editorové operace, strom a vnořování skupin, skupinové efekty a projekty v2 s migrací v1; [návod 0.8](composition-0.8.md). Realizace v 0.9: masky z jiné vrstvy s invertováním, silou a změkčením, duplikace vrstev a celých skupin a projekty v3; [návod 0.9](masks-0.9.md). Vícečetný výběr a rozpuštění skupin zůstávají návaznými úkoly. Seznam posledních projektů, náhledové kartičky efektů a rozšířený dialog odchodu jsou další úpravy ovládání.
+Realizace v 0.7: hledání a oblíbené efekty, duplikace, kopírování stacků, uživatelské a ukázkové presety s přenosným formátem a automatická zotavovací kopie. Podrobnosti v [návodu 0.7](workflow-0.7.md). Realizace v 0.8: osm generátorových vrstev, rekurzivní editorové operace, strom a vnořování skupin, skupinové efekty a projekty v2 s migrací v1; [návod 0.8](composition-0.8.md). Realizace v 0.9: masky z jiné vrstvy s invertováním, silou a změkčením, duplikace vrstev a celých skupin a projekty v3; [návod 0.9](masks-0.9.md). Realizace v 0.10: Displacement Map, Halftone, Dither, Morphology a Palette Remap; [návod 0.10](effects-0.10.md). Vícečetný výběr a rozpuštění skupin zůstávají návaznými úkoly. Seznam posledních projektů, náhledové kartičky efektů a rozšířený dialog odchodu jsou další úpravy ovládání.
 
 ## Výchozí stav a směr
 
@@ -96,7 +96,7 @@ Hotovo znamená: mozaika alespoň ze tří zdrojů funguje i po save/load, skryt
 - Animace parametrů: klíčové snímky pro číselné hodnoty, deterministický časový vstup a nejprve export PNG sekvence. Přímý video export řešit až po dokončení tohoto základu.
 - Uzlový editor: začít pohledem na existující render graph pro pochopení vazeb; úpravu uzlů přidat po stabilizaci skupin, masek a pojmenovaných vstupů.
 - Přesnější simulace: volitelné float targety pro Reaction Diffusion s detekcí schopností GPU a testy; bitové efekty nadále zachovají definované 8bit chování.
-- Další efekty: Displacement Map, Distance Field, Halftone, Dither, Morphology a Palette Remap. První dva dobře navazují na generátory a masky; palety lze sdílet s Quantized Difference.
+- Další efekty: Distance Field a další zpracování masek. Displacement Map, Halftone, Dither, Morphology a Palette Remap byly doplněny v 0.10. Distance Field navazuje na generátory a masky.
 - WebGPU nebo externí pluginy: samostatné projekty až podle měření výkonu a konkrétního požadavku. Rozšiřovat současné API tak, aby tyto možnosti zůstaly otevřené.
 
 ## Doporučené pořadí realizace

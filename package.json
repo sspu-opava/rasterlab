@@ -1,7 +1,7 @@
 {
   "name": "rasterlab",
   "private": true,
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -19,7 +19,8 @@
     "test:remaining": "node scripts/remaining.mjs",
     "test:workflow": "node scripts/workflow.mjs",
     "test:composition": "node scripts/composition.mjs",
-    "test:masks": "node scripts/masks.mjs"
+    "test:masks": "node scripts/masks.mjs",
+    "test:creative": "node scripts/creative.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.50.0",

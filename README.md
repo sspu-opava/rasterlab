@@ -1,6 +1,6 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.9 nabízí 48 efektů, osm samostatných generátorů, masky z jiné vrstvy, vnořené skupiny s duplikací, knihovnu presetů a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.10 nabízí 53 efektů, osm samostatných generátorů, masky z jiné vrstvy, vnořené skupiny s duplikací, knihovnu presetů a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
 
 ## Spuštění
 
@@ -24,13 +24,14 @@ npm run test:remaining # posledních 6 katalogových efektů; stejné preview
 npm run test:workflow # presety, kopírování, historie a IndexedDB obnova
 npm run test:composition # osm generátorů, vnořené skupiny a projekty v3
 npm run test:masks   # masky, duplikace skupin, projekty v3 a obnova
+npm run test:creative # pět nových efektů, přesné pixely a barevná paleta
 cargo test --manifest-path src-tauri/Cargo.toml --lib
 npm run desktop:build
 ```
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.9.0.exe` a `releases/RasterLab-0.9.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
+Připravené distribuční soubory této iterace: `releases/RasterLab-0.10.0.exe` a `releases/RasterLab-0.10.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -55,6 +56,7 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 - Contour Atlas, Scanline Displace a Modulo Mix: jasové vrstevnice, seedované posuny řádků a modulo kombinace dvou vrstev.
 - Dalších 20 efektů v 0.5: [seznam a ovládání](docs/effects-0.5.md). Nová víceprůchodová API větev využívá dvě opakovaně používané GPU textury.
 - Zbývajících šest v 0.6: Channel Algebra, Recursive Collage, Echo Frames, Cellular Growth, Databend a Signal Collapse; [ovládání a příklady](docs/effects-0.6.md).
+- Nových pět v 0.10: Displacement Map, Halftone, Dither, Morphology a Palette Remap; [ovládání a kombinace](docs/effects-0.10.md).
 - Hledání efektů podle názvu, kategorie i popisu a trvale uložené oblíbené efekty.
 - Duplikace efektu a kopírování celého stacku mezi vrstvami s novým přiřazením vstupů a jediným undo.
 - Knihovna až 100 uživatelských presetů, deset ukázkových postupů, import/export `.preset.json`; [návod](docs/workflow-0.7.md).

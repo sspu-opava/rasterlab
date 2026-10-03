@@ -2,9 +2,9 @@ import { expect, it } from 'vitest';
 import { effectRegistry } from '../index';
 import { validateParameters } from './parameters';
 import { partialFragmentOrder } from '../collage/cutUp';
-it('exposes 48 unique effects with valid default parameters and serializable metadata', () => {
-  const definitions = effectRegistry.list(); expect(definitions).toHaveLength(48);
-  expect(new Set(definitions.map(effect => effect.id)).size).toBe(48);
+it('exposes 53 unique effects with valid default parameters and serializable metadata', () => {
+  const definitions = effectRegistry.list(); expect(definitions).toHaveLength(53);
+  expect(new Set(definitions.map(effect => effect.id)).size).toBe(53);
   for (const definition of definitions) {
     const defaults = Object.fromEntries(definition.parameters.map(parameter => [parameter.id, parameter.default]));
     expect(validateParameters(definition, defaults)).toEqual(defaults);

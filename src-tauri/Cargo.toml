@@ -1,6 +1,6 @@
 [package]
 name = "rasterlab"
-version = "0.9.0"
+version = "0.10.0"
 description = "Nondestructive experimental raster editor"
 authors = ["RasterLab"]
 edition = "2021"

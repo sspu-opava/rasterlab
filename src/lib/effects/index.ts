@@ -44,5 +44,12 @@ import { echoFrames } from './collage/echoFrames';
 import { cellularGrowth } from './generative/cellularGrowth';
 import { databend } from './distortion/databend';
 import { signalCollapse } from './distortion/signalCollapse';
+import { displacementMap } from './distortion/displacementMap';
+import { halftone } from './material/halftone';
+import { dither } from './color/dither';
+import { morphology } from './material/morphology';
+import { paletteRemap } from './color/paletteRemap';
 export const effectRegistry = new EffectRegistry();
 for (const effect of [grayscale, threshold, posterize, noise, rgbShift, wave, bitPlane, strips, tiles, crumple, photocopy, interference, voronoiCollage, inkBleed, surfaceRelief, contourAtlas, scanlineDisplace, moduloMix, ...(['XOR', 'AND', 'OR', 'NAND'] as const).map(booleanEffect), logicMatrix, differenceFold, bitPlaneMixer, quantizedDifference, crossStrips, fragmentScatter, cutUp, multiSourceMosaic, foldMapEffect, paperWarp, tornPaper, printMisregistration, fbmNoise, voronoiField, flowField, radialField, blockCorruption, pixelSort, feedback, reactionDiffusion, channelAlgebra, recursiveCollage, echoFrames, cellularGrowth, databend, signalCollapse]) effectRegistry.register(effect);
+
+for (const effect of [displacementMap, halftone, dither, morphology, paletteRemap]) effectRegistry.register(effect);

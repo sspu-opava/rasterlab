@@ -1,4 +1,4 @@
-# Architektura RasterLabu 0.9
+# Architektura RasterLabu 0.10
 
 ```text
 Svelte UI → editor commands / RasterDocument → RenderGraph → GraphRenderer → PixiJS 8 WebGL
@@ -42,7 +42,7 @@ Rust je omezen na filesystem: `save_project`, `load_project`, `write_export` a `
 
 UI ovládá rastrové i generátorové vrstvy a vnořené skupiny. `document/layers.ts` poskytuje rekurzivní průchod, vyhledání, mapování, kontrolu grafu a přesuny. Zámek předka chrání potomky; drag dítěte převádí dokumentový posun inverzními transformacemi předků. Přesun do jiné skupiny zachová místní transformaci, takže transformovaný nový rodič může změnit výslednou polohu.
 
-`generators/index.ts` obsahuje samostatnou registry osmi zdrojů využívající metadata a runtime API efektů. RenderGraph přidává uzel generated → source → effects; změna parametrů zneplatní zdroj i následníky. Registry efektů nadále obsahuje 48 modulů. Generátory byly zavedeny s projekty v2; současný serializer zapisuje v3 a deserializer migruje v1/v2.
+`generators/index.ts` obsahuje samostatnou registry osmi zdrojů využívající metadata a runtime API efektů. RenderGraph přidává uzel generated → source → effects; změna parametrů zneplatní zdroj i následníky. Registry efektů obsahuje 53 modulů. Nové moduly 0.10 používají stejný jednopassový shader adapter; Palette Remap doplňuje vec4 uniformy vlastních barev přes ShaderData. Generátory byly zavedeny s projekty v2; současný serializer zapisuje v3 a deserializer migruje v1/v2.
 
 `LayerMask` je volitelný objekt libovolné podporované vrstvy. `setLayerMask` validuje úplný kandidátní graf a zapisuje jediný příkaz historie. Kontrola závislostí zahrnuje masku i při použití presetu a přesunu mezi skupinami. Odstranění zdroje čistí maskové reference; undo je obnoví. `duplicateLayer` klonuje celý podstrom, přidělí nová ID vrstvy/efektů a přemapuje pouze reference uvnitř kopie.
 
