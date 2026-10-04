@@ -1,7 +1,7 @@
 {
   "name": "rasterlab",
   "private": true,
-  "version": "0.10.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -20,7 +20,10 @@
     "test:workflow": "node scripts/workflow.mjs",
     "test:composition": "node scripts/composition.mjs",
     "test:masks": "node scripts/masks.mjs",
-    "test:creative": "node scripts/creative.mjs"
+    "test:creative": "node scripts/creative.mjs",
+    "version:sync": "node scripts/version.mjs",
+    "release:check": "node scripts/release-check.mjs",
+    "test:stabilization": "node scripts/stabilization.mjs"
   },
   "dependencies": {
     "@lucide/svelte": "^1.50.0",
@@ -38,5 +41,6 @@
     "typescript": "^5.9.0",
     "vite": "^7.0.0",
     "vitest": "^5.0.3"
-  }
+  },
+  "license": "UNLICENSED"
 }

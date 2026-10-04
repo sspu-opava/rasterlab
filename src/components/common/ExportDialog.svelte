@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { Download, X } from '@lucide/svelte';
-  import { documentStore, exportCurrentDocument, busy } from '../../lib/editor/store';
+  import { documentStore, exportCurrentDocument, exportProgress, cancelExport, busy } from '../../lib/editor/store';
   import type { ExportFormat } from '../../lib/project/export';
   let { onclose }: { onclose: () => void } = $props();
   let dialog: HTMLDialogElement;
@@ -14,6 +14,7 @@
     <p>Celý dokument · {$documentStore.width} × {$documentStore.height} px<br/>Zoom a posun pracovní plochy export neovlivní.</p>
     <label class="property-wide"><span>Formát</span><select aria-label="Formát exportu" bind:value={format} disabled={$busy}><option value="png">PNG · bezeztrátově</option><option value="jpeg">JPEG · bílé pozadí</option><option value="webp">WebP</option></select></label>
     {#if format !== 'png'}<label class="opacity-control"><span>Kvalita</span><input type="range" aria-label="Kvalita exportu" min="0.1" max="1" step="0.01" bind:value={quality} disabled={$busy}/><output>{Math.round(quality * 100)}%</output></label>{/if}
-    <div class="dialog-actions"><button type="button" class="small-button" disabled={$busy} onclick={onclose}>Zrušit</button><button class="primary-button" type="submit" disabled={$busy}><Download size={15}/> {$busy ? 'Exportuji…' : 'Exportovat'}</button></div>
+    {#if $busy}<p role="status">{$exportProgress.stage}</p>{/if}
+    <div class="dialog-actions"><button type="button" class="small-button" disabled={$busy && !$exportProgress.cancellable} onclick={() => { if ($busy) cancelExport(); else onclose(); }}>Zrušit</button><button class="primary-button" type="submit" disabled={$busy}><Download size={15}/> {$busy ? 'Exportuji…' : 'Exportovat'}</button></div>
   </form>
 </dialog>

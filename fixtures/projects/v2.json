@@ -1,0 +1,42 @@
+{
+  "format": "rasterlab",
+  "version": 2,
+  "document": {
+    "id": "document-fixture",
+    "name": "Migrace v2",
+    "width": 4,
+    "height": 4,
+    "layers": [
+      {
+        "id": "layer-a",
+        "name": "Checker",
+        "visible": true,
+        "locked": false,
+        "opacity": 1,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1
+        },
+        "rotation": 0,
+        "blendMode": "normal",
+        "effects": [],
+        "type": "generated",
+        "generatorId": "checker",
+        "parameters": {}
+      }
+    ],
+    "background": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "createdAt": "2026-10-03T00:00:00.000Z",
+    "modifiedAt": "2026-10-03T00:00:00.000Z"
+  },
+  "assets": []
+}

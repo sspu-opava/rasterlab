@@ -1,3 +1,4 @@
+import { assertRenderCapacity } from './capacity';
 import { Container, Graphics, Rectangle, RenderTexture, Sprite, Texture } from 'pixi.js';
 import type { Renderer } from 'pixi.js';
 import type { AssetManager } from '../assets/AssetManager';
@@ -22,15 +23,36 @@ export class GraphRenderer {
   private masks = new Map<string, { field: EffectRenderer; blur: EffectRenderer; apply: EffectRenderer }>();
   private contextKey = '';
   readonly errors = new Map<string, string>();
+  readonly passSubmitMs = new Map<string, number>();
+  get diagnostics(): { cachedTargets: number; poolBytes: number; passSubmitMs: [string, number][] } {
+    return { cachedTargets: this.targets.size, poolBytes: this.pool.bytes, passSubmitMs: [...this.passSubmitMs] };
+  }
   constructor(private renderer: Renderer, private assets: AssetManager) {}
 
   render(document: RasterDocument, mode: RenderMode = 'preview'): Texture {
+    const gl = 'gl' in this.renderer ? this.renderer.gl as WebGLRenderingContext : null;
+    const max = gl ? gl.getParameter(gl.MAX_TEXTURE_SIZE) as number : 4096;
+    const records = this.assets.list();
+    if (records.some(asset => Math.max(asset.width, asset.height) > max)) throw new Error(`Zdrojový obrázek překračuje GPU limit ${max} px.`);
+    assertRenderCapacity(document, max, records.reduce((sum, asset) => sum + asset.width * asset.height * 4, 0));
     const key = `${document.id}:${document.width}:${document.height}:${mode}:${this.assets.revision}`;
     if (key !== this.contextKey) { this.clear(); this.contextKey = key; }
     this.graph.update(document);
     const layerMap = new Map<string, LayerNode>();
     const collect = (layers: LayerNode[]) => { for (const layer of layers) { layerMap.set(layer.id, layer); if (layer.type === 'group') collect(layer.children); } };
     collect(document.layers);
+    // Disabled passes must release their cached outputs and multipass scratch textures.
+    // Otherwise toggling many stacks could exceed the estimate for the active graph.
+    const releaseTarget = (id: string) => { const texture = this.targets.get(id); if (texture) { this.pool.release(texture); this.targets.delete(id); } };
+    for (const layer of layerMap.values()) {
+      for (const effect of layer.effects) if (!effect.enabled) { this.effects.get(effect.id)?.renderer.destroy(); this.effects.delete(effect.id); releaseTarget(effect.id); this.errors.delete(effect.id); }
+      if (!layer.mask?.enabled) {
+        const runtime = this.masks.get(layer.id);
+        if (runtime) { runtime.field.destroy(); runtime.blur.destroy(); runtime.apply.destroy(); this.masks.delete(layer.id); }
+        for (const suffix of ['mask-field', 'mask-x', 'mask-y', 'mask']) releaseTarget(`${layer.id}:${suffix}`);
+        this.errors.delete(`${layer.id}:mask`);
+      }
+    }
     const visiting = new Set<string>();
     const outputs = new Map<string, Texture>();
     const context = { width: document.width, height: document.height, mode };
@@ -40,7 +62,7 @@ export class GraphRenderer {
       return value;
     };
     const draw = (id: string, container: Container) => {
-      const result = target(id); this.renderer.render({ container, target: result, clear: true }); return result;
+      const result = target(id), started = performance.now(); this.renderer.render({ container, target: result, clear: true }); this.passSubmitMs.set(id, performance.now() - started); this.graph.dirty.delete(id); return result;
     };
     const composite = (layers: LayerNode[]): Container => {
       const container = new Container();
@@ -99,7 +121,7 @@ export class GraphRenderer {
             runtime.renderer.update(validateParameters(definition, instance.parameters), { ...context, secondary });
             if (runtime.renderer.render) {
               const output = target(instance.id);
-              runtime.renderer.render(input, output, this.renderer); input = output;
+              const started = performance.now(); runtime.renderer.render(input, output, this.renderer); this.passSubmitMs.set(instance.id, performance.now() - started); this.graph.dirty.delete(instance.id); input = output;
             } else {
               const sprite = new Sprite(input); sprite.filterArea = new Rectangle(0, 0, document.width, document.height); sprite.filters = [runtime.renderer.filter];
               try { input = draw(instance.id, sprite); } finally { sprite.filters = []; sprite.destroy(); }
@@ -135,7 +157,7 @@ export class GraphRenderer {
             this.errors.delete(maskId);
           } catch (error) { const message = error instanceof Error ? error.message : 'Maska selhala.'; if (this.errors.get(maskId) !== message) logError('EFFECT', message, error); this.errors.set(maskId, message); }
         } else this.errors.delete(`${id}:mask`);
-        outputs.set(id, input); return input;
+        this.graph.dirty.delete(`${id}:output`); outputs.set(id, input); return input;
       } finally { visiting.delete(id); }
     };
     let result: Texture;
@@ -150,12 +172,16 @@ export class GraphRenderer {
     for (const [id, runtime] of this.effects) if (!this.graph.nodes.has(id)) { runtime.renderer.destroy(); this.effects.delete(id); this.errors.delete(id); }
     for (const [id, runtime] of this.generators) if (!this.graph.nodes.has(`${id}:generated`)) { runtime.renderer.destroy(); this.generators.delete(id); this.errors.delete(id); }
     for (const [id, runtime] of this.masks) if (!this.graph.nodes.has(`${id}:mask`)) { runtime.field.destroy(); runtime.blur.destroy(); runtime.apply.destroy(); this.masks.delete(id); this.errors.delete(`${id}:mask`); }
-    this.graph.markClean(); return result;
+    const validErrors = new Set([...layerMap.keys(), ...this.graph.nodes.keys()]);
+    for (const id of this.errors.keys()) if (!validErrors.has(id)) this.errors.delete(id);
+    for (const id of this.passSubmitMs.keys()) if (!this.graph.nodes.has(id)) this.passSubmitMs.delete(id);
+    // Hidden/unreferenced nodes were not evaluated and must retain invalidation.
+    this.graph.dirty.delete('document'); return result;
   }
   clear(): void {
     for (const runtime of this.effects.values()) runtime.renderer.destroy();
     for (const runtime of this.masks.values()) { runtime.field.destroy(); runtime.blur.destroy(); runtime.apply.destroy(); } this.masks.clear();
     for (const runtime of this.generators.values()) runtime.renderer.destroy(); this.generators.clear();
-    this.effects.clear(); this.targets.clear(); this.pool.clear(); this.errors.clear(); this.graph = new RenderGraph();
+    this.effects.clear(); this.targets.clear(); this.pool.clear(); this.errors.clear(); this.passSubmitMs.clear(); this.graph = new RenderGraph();
   }
 }

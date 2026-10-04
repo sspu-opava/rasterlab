@@ -1,0 +1,25 @@
+name: Validate RasterLab
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: npm ci
+      - run: npx playwright install chromium
+      - run: npm run release:check -- --desktop
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/src-tauri/target-ci
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: validation-and-installer
+          path: |
+            test-results/release
+            test-results/review
+            src-tauri/target-ci/release/bundle/nsis

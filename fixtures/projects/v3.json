@@ -1,0 +1,71 @@
+{
+  "format": "rasterlab",
+  "version": 3,
+  "document": {
+    "id": "document-fixture",
+    "name": "Migrace v3",
+    "width": 4,
+    "height": 4,
+    "layers": [
+      {
+        "id": "layer-a",
+        "name": "Checker",
+        "visible": true,
+        "locked": false,
+        "opacity": 1,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1
+        },
+        "rotation": 0,
+        "blendMode": "normal",
+        "effects": [],
+        "type": "generated",
+        "generatorId": "checker",
+        "parameters": {},
+        "mask": {
+          "sourceId": "layer-b",
+          "enabled": true,
+          "mode": "alpha",
+          "invert": false,
+          "strength": 1,
+          "feather": 0
+        }
+      },
+      {
+        "id": "layer-b",
+        "name": "Maska",
+        "visible": true,
+        "locked": false,
+        "opacity": 1,
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "scale": {
+          "x": 1,
+          "y": 1
+        },
+        "rotation": 0,
+        "blendMode": "normal",
+        "effects": [],
+        "type": "generated",
+        "generatorId": "noise",
+        "parameters": {}
+      }
+    ],
+    "background": {
+      "r": 0,
+      "g": 0,
+      "b": 0,
+      "a": 0
+    },
+    "createdAt": "2026-10-03T00:00:00.000Z",
+    "modifiedAt": "2026-10-03T00:00:00.000Z"
+  },
+  "assets": []
+}

@@ -1,8 +1,31 @@
-# Ověření RasterLabu 0.10
+# Ověření RasterLabu 1.0.0
+
+4. 10. 2026: finální EXE a NSIS instalátor mají systémovou verzi 1.0.0. Celá automatická release kontrola prošla: 0 typových chyb/varování, 70 testů ve 22 souborech, šest Rust testů, format/clippy, inventář závislostí a všech 14 browser regresních sad. Samostatně prošlo 100 cyklů import/delete/undo/new s uvolněním všech textur a URL; `review-soak.mjs` je nově také součástí dalších běhů release kontroly.
+
+Nativně byl ověřen start EXE, otevření a zrušení open/save dialogů, odblokování operací, zpráva po zrušení save a čisté zavření. Přesný rozsah, nedostupné části automatizace a neprovedené kontroly jsou v [poznámkách k vydání 1.0](vydani-1.0.md). Distribuce obsahuje protokoly, návod a SHA-256. Instalace na čistém systému a matice GPU nebyly provedené.
+
+## Historické ověření 0.11.0
+
+Windows, 4. 10. 2026. Stabilizační změny a zbývající podmínky vydání popisuje [stav oprav před 1.0](stabilizace-0.11.md).
+
+- TypeScript/Svelte: 0 chyb, 0 varování; produkční build prošel.
+- Vitest: všech 68 testů v 21 souborech prošlo. Nové kontroly zahrnují archiv, migrace v1/v2/v3, limity obrázků, historii a uchování neotevřené zotavovací kopie při zavření.
+- Rust: všech šest testů prošlo; `cargo fmt --check` a `cargo clippy --lib -- -D warnings` také.
+- Všech 14 browser sad prošlo: Smoke, Features, Catalog, Expansion, Remaining, Creative, Composition, Workflow, Masks, Review UI, Review Model, Review Races, Review Context a Stabilization. Pokrývají všech 53 efektů a osm generátorů.
+- Stabilization: 24 kontrol včetně rozepsaných polí, invalidace skrytého náhledu, shody pixelů skupin a archivů, zrušení exportu, posledních projektů a browser hustoty 100/125/150/200 %. Review UI/model ověřují původní reprodukce pan, textového undo, souběhu a čištění zdrojů historie.
+- WebGL loss/restore: shodný obnovený náhled a úspěšný export. Jde o browser backend, nikoli potvrzení fyzických GPU.
+- Inventář závislostí: 142 npm a 253 Rust balíčků, žádný chybějící licenční údaj. Inventář sám nenahrazuje volbu veřejné licence projektu.
+- Úplný `release:check -- --desktop` skončil úspěšně včetně EXE a NSIS instalátoru. Distribuční kopie mají systémovou verzi 0.11.0 a jsou v `releases/` společně se SHA-256, protokolem a inventářem závislostí. Build použil oddělený target `src-tauri/target-v02`.
+
+Průběh úplné kontroly ukládá `npm run release:check -- --desktop` do `test-results/release/checks.json`; jednotlivé výsledky jsou v `test-results/review/` a `test-results/release/stabilization.json`. Aktuální snímky rozhraní `foundation-demo.png` a `release/minimum-density-200.png` prošly vizuální kontrolou.
+
+Nativní start, dialogy, instalace/upgrade na čistém Windows a fyzické GPU zůstávají neověřené kvůli nedostupnému připojení computer-use. Pro jejich ověření je připraven [nativní protokol](release-native-protocol.md). Verze 0.11.0 je stabilizační kandidát před 1.0.
+
+## Historické ověření 0.10
 
 Windows, 3. 10. 2026. Node.js 24.19.0, npm 12.0.2, Rust/Cargo 1.99.0 stable pro `x86_64-pc-windows-msvc`, Visual Studio 2019 Community C++ tools, WebView2.
 
-Ve verzi 0.10 byly spuštěny unit testy, Rust testy, produkční/native build a browser testy Creative a Workflow. Níže uvedené regresní sady původních 48 efektů, generátorů a masek naposledy prošly proti verzi 0.9; jejich renderovací implementace se v 0.10 nemění.
+Ve verzi 0.10 byly spuštěny unit testy, Rust testy a produkční/native build. Při následné [revizi před 1.0](revize-pred-1.0.md) byly proti 0.10 znovu spuštěny všechny browser sady: Smoke, Features, Catalog, Expansion, Remaining, Creative, Composition, Workflow a Masks. Všechny prošly. Cílená revize ovládání a chybových stavů však odhalila další chyby v pan, ukládání rozpracovaných polí, textovém undo, souběhu importu a obnově WebGL. Zelené regresní sady proto neznamenají připravenost na 1.0.
 
 - TypeScript/Svelte check: 0 chyb a 0 varování.
 - Unit tests: 53 testů v 16 souborech. Vedle modelu, efektů, historie, presetů a zotavení ověřují rekurzivní přesuny a zámky, cykly skupin, převod dragu přes transformaci rodiče, osm generátorů, migrace projektů a editaci vnořené vrstvy přes undo/redo. Masky kontrolují rozsahy, zámky, maskové/efektové/skupinové cykly, validaci v3, odstranění zdroje/undo, downstream invalidaci a přemapování efektových i maskových referencí v kopii celé skupiny. Registry efektů nyní obsahuje 53 jedinečných definic s validními defaulty.

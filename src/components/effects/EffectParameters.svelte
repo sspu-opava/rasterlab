@@ -1,8 +1,9 @@
 <script lang="ts">
+  import { layerPath } from '../../lib/document/layers';
   import { Dices } from '@lucide/svelte';
   import type { EffectDefinition, ParameterValue } from '../../lib/effects/core/types';
   import type { EffectInstance, LayerNode } from '../../lib/document/types';
-  import { setEffectParameter, setEffectInput, finishEdit } from '../../lib/editor/store';
+  import { documentStore, setEffectParameter, setEffectInput, finishEdit } from '../../lib/editor/store';
   import { randomSeed } from '../../lib/utils/random';
   let { definition, instance, layer, layers, onparameter }: { definition: EffectDefinition; instance: EffectInstance; layer: LayerNode; layers: LayerNode[]; onparameter?: (key: string, value: ParameterValue) => void } = $props();
   function setParameter(key: string, value: ParameterValue): void { if (onparameter) onparameter(key, value); else setEffectParameter(layer.id, instance.id, key, value); }
@@ -10,7 +11,7 @@
 
 <div class="effect-parameters">
   {#each definition.inputs as input (input.id)}
-    <label class="effect-parameter"><span>{input.label}</span><select aria-label={input.label} value={instance.inputs[input.id] ?? ''} disabled={layer.locked} onchange={event => setEffectInput(layer.id, instance.id, input.id, event.currentTarget.value)}><option value="">Vyberte vrstvu…</option>{#each layers.filter(value => value.id !== layer.id) as value}<option value={value.id}>{value.name}</option>{/each}</select></label>
+    <label class="effect-parameter"><span>{input.label}</span><select aria-label={input.label} value={instance.inputs[input.id] ?? ''} disabled={layer.locked} onchange={event => setEffectInput(layer.id, instance.id, input.id, event.currentTarget.value)}><option value="">Vyberte vrstvu…</option>{#each layers.filter(value => value.id !== layer.id) as value}<option value={value.id}>{layerPath($documentStore.layers, value.id)}</option>{/each}</select></label>
   {/each}
   {#each definition.parameters as parameter (parameter.id)}
     <div class="effect-parameter">
@@ -22,7 +23,7 @@
       {:else if parameter.type === 'color'}
         <input id={`parameter-${instance.id}-${parameter.id}`} type="color" value={String(instance.parameters[parameter.id])} disabled={layer.locked} oninput={event => setParameter(parameter.id, event.currentTarget.value)}/>
       {:else if parameter.type === 'layer'}
-        <select id={`parameter-${instance.id}-${parameter.id}`} value={String(instance.parameters[parameter.id] ?? '')} disabled={layer.locked} onchange={event => setParameter(parameter.id, event.currentTarget.value)}><option value="">Žádná</option>{#each layers.filter(value => value.id !== layer.id) as value}<option value={value.id}>{value.name}</option>{/each}</select>
+        <select id={`parameter-${instance.id}-${parameter.id}`} value={String(instance.parameters[parameter.id] ?? '')} disabled={layer.locked} onchange={event => setParameter(parameter.id, event.currentTarget.value)}><option value="">Žádná</option>{#each layers.filter(value => value.id !== layer.id) as value}<option value={value.id}>{layerPath($documentStore.layers, value.id)}</option>{/each}</select>
       {:else if parameter.type === 'text'}
         <input id={`parameter-${instance.id}-${parameter.id}`} type="text" maxlength="256" spellcheck={false} value={String(instance.parameters[parameter.id])} disabled={layer.locked} onchange={event => { setParameter(parameter.id, event.currentTarget.value); finishEdit(); }} onkeydown={event => { if (event.key === 'Enter') event.currentTarget.blur(); else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') { setParameter(parameter.id, event.currentTarget.value); finishEdit(); } }}/>
       {:else if parameter.type === 'seed'}

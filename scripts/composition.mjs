@@ -4,13 +4,13 @@ import { mkdir } from 'node:fs/promises';
 const h = await effectHarness(), { page } = h;
 page.on('dialog', dialog => dialog.accept());
 const generators = [['noise', 'Noise'], ['checker', 'Checker'], ['lines', 'Lines'], ['dots', 'Dots'], ['fbm', 'FBM Noise'], ['voronoi', 'Voronoi'], ['interference', 'Interference'], ['radial', 'Radial Field']];
-const layersTab = () => page.getByRole('button', { name: /^Layers \d+$/ });
-const select = async name => { await layersTab().click(); await page.getByRole('button', { name: `${name} Generator layer`, exact: true }).click(); };
+const layersTab = () => page.getByRole('button', { name: /^Vrstvy \d+$/ });
+const select = async name => { await layersTab().click(); await page.getByRole('button', { name: `${name} Generátor`, exact: true }).click(); };
 const pixels = (image, x, y) => image.pixels.slice((y * image.width + x) * 4, (y * image.width + x) * 4 + 4);
-const create = async () => { await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click(); await page.getByLabel('Šířka / px').fill('128'); await page.getByLabel('Výška / px').fill('96'); const replace = page.getByRole('checkbox', { name: /Nahradit aktuální/ }); if (await replace.count()) await replace.check(); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click(); };
+const create = async () => { await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click(); if (await page.getByRole('heading', { name: 'Uložit rozpracovaný projekt?' }).count()) await page.getByRole('button', { name: 'Zahodit změny', exact: true }).click(); await page.getByLabel('Šířka / px').fill('128'); await page.getByLabel('Výška / px').fill('96'); const replace = page.getByRole('checkbox', { name: /Nahradit aktuální/ }); if (await replace.count()) await replace.check(); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click(); };
 await mkdir('test-results', { recursive: true });
 try {
-  await create(); await page.getByRole('button', { name: 'Generators', exact: true }).click();
+  await create(); await page.getByRole('button', { name: 'Generátory', exact: true }).click();
   const gallery = [];
   for (const [id, name] of generators) {
     await page.getByRole('button', { name: `Přidat generátor ${name}`, exact: true }).click();
@@ -26,19 +26,19 @@ try {
   await page.getByRole('button', { name: 'Přidat generátor Checker', exact: true }).click(); const checker = await h.exported();
   await page.getByRole('button', { name: 'Seskupit vybranou vrstvu', exact: true }).click(); assert(checker.equals(await h.exported()));
   let model = JSON.parse(await h.save()), groupId = model.document.layers[0].id, checkerId = model.document.layers[0].children[0].id;
-  await page.getByRole('button', { name: 'Sbalit skupinu Group' }).click(); assert.equal(await page.getByRole('button', { name: 'Checker Generator layer', exact: true }).count(), 0); assert(checker.equals(await h.exported())); await page.getByRole('button', { name: 'Rozbalit skupinu Group' }).click();
+  await page.getByRole('button', { name: 'Sbalit skupinu Group' }).click(); assert.equal(await page.getByRole('button', { name: 'Checker Generátor', exact: true }).count(), 0); assert(checker.equals(await h.exported())); await page.getByRole('button', { name: 'Rozbalit skupinu Group' }).click();
   await select('Checker'); await h.set('Cell size / px hodnota', 8); const smallChecker = await h.exported(); assert(!smallChecker.equals(checker)); await page.keyboard.press('Control+z'); assert(checker.equals(await h.exported())); await page.keyboard.press('Control+Shift+z'); assert(smallChecker.equals(await h.exported()));
   await page.getByRole('button', { name: 'Přidat generátor Noise', exact: true }).click(); await page.getByRole('combobox', { name: 'Nadřazená skupina' }).selectOption(groupId);
   model = JSON.parse(await h.save()); assert.equal(model.document.layers.length, 1); assert.equal(model.document.layers[0].children.length, 2); const noiseId = model.document.layers[0].children[0].id;
   await page.getByRole('button', { name: 'Skrýt Noise', exact: true }).click(); assert(smallChecker.equals(await h.exported()));
-  await page.getByRole('button', { name: 'Group Group layer', exact: true }).click(); await h.set('Pozice X', 10); let decoded = await h.decoded(await h.exported()); assert.equal(pixels(decoded, 4, 40)[3], 0); await page.keyboard.press('Control+z'); assert(smallChecker.equals(await h.exported()));
+  await page.getByRole('button', { name: 'Group Skupina', exact: true }).click(); await h.set('Pozice X', 10); let decoded = await h.decoded(await h.exported()); assert.equal(pixels(decoded, 4, 40)[3], 0); await page.keyboard.press('Control+z'); assert(smallChecker.equals(await h.exported()));
   await page.getByRole('slider', { name: 'Krytí vrstvy' }).fill('0.5'); await page.getByRole('slider', { name: 'Krytí vrstvy' }).press('Tab'); decoded = await h.decoded(await h.exported()); assert(Math.abs(pixels(decoded, 40, 30)[3] - 128) <= 1); await page.keyboard.press('Control+z');
   await page.getByRole('button', { name: 'Zamknout Group', exact: true }).click(); await select('Checker'); assert(await page.getByRole('spinbutton', { name: 'Cell size / px hodnota' }).isDisabled()); assert(await page.getByRole('button', { name: 'Odstranit vybranou vrstvu', exact: true }).isDisabled()); await page.getByRole('button', { name: 'Odemknout Group', exact: true }).click();
   // Hidden siblings can feed effects, but ancestors cannot feed their descendants.
-  await page.getByRole('button', { name: 'Effects', exact: true }).click(); await h.add('xor'); await page.getByRole('combobox', { name: 'Druhá vrstva', exact: true }).selectOption(noiseId); const combined = await h.exported(); assert(!combined.equals(smallChecker));
+  await page.getByRole('button', { name: 'Efekty', exact: true }).click(); await h.add('xor'); await page.getByRole('combobox', { name: 'Druhá vrstva', exact: true }).selectOption(noiseId); const combined = await h.exported(); assert(!combined.equals(smallChecker));
   await page.getByRole('button', { name: 'Uložit stack', exact: true }).click(); await page.getByRole('textbox', { name: 'Název presetu' }).fill('Vnořený XOR'); await page.getByRole('dialog').getByRole('button', { name: 'Uložit preset', exact: true }).click();
   const saved = await h.save(); await h.load(saved); assert(combined.equals(await h.exported())); model = JSON.parse(await h.save()); assert.equal(model.document.layers[0].children[1].effects[0].inputs.secondary, noiseId);
-  await layersTab().click(); await page.getByRole('button', { name: 'Group Group layer', exact: true }).click(); await page.getByRole('button', { name: 'Effects', exact: true }).click(); await h.add('posterize'); const groupEffect = await h.exported(); assert(!combined.equals(groupEffect)); await page.keyboard.press('Control+z'); assert(combined.equals(await h.exported()));
+  await layersTab().click(); await page.getByRole('button', { name: 'Group Skupina', exact: true }).click(); await page.getByRole('button', { name: 'Efekty', exact: true }).click(); await h.add('posterize'); const groupEffect = await h.exported(); assert(!combined.equals(groupEffect)); await page.keyboard.press('Control+z'); assert(combined.equals(await h.exported()));
   // Reparenting, sibling order, child deletion and reference cleanup all roundtrip.
   await select('Checker'); await page.getByRole('combobox', { name: 'Nadřazená skupina' }).selectOption(''); assert.equal(JSON.parse(await h.save()).document.layers[0].id, checkerId); await page.keyboard.press('Control+z'); assert.equal(JSON.parse(await h.save()).document.layers[0].children[1].id, checkerId); assert(combined.equals(await h.exported()));
   await select('Noise'); await page.getByRole('button', { name: 'Posunout vrstvu dolů', exact: true }).click(); assert.equal(JSON.parse(await h.save()).document.layers[0].children[1].id, noiseId); await page.keyboard.press('Control+z');

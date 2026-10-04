@@ -6,6 +6,8 @@ pub fn run() {
             files::save_project,
             files::load_project,
             files::write_export,
+            files::write_archive,
+            files::read_archive,
             files::write_preset
         ])
         .run(tauri::generate_context!())

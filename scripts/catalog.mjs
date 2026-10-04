@@ -44,7 +44,7 @@ try {
   await page.getByRole('button', { name: 'Demo experiment', exact: true }).click();
   await page.locator('.layer-row').waitFor();
   const original = await exported();
-  await page.getByRole('button', { name: 'Effects', exact: true }).click();
+  await page.getByRole('button', { name: 'Efekty', exact: true }).click();
   for (const [id, name] of effects) {
     await add(id);
     const changed = await exported(); assert(!changed.equals(original), `${name} must change image pixels`);
@@ -90,7 +90,7 @@ try {
   const mixed = await exported();
   const save = page.waitForEvent('download'); await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click();
   const saved = await readFile(await (await save).path());
-  await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'catalog.json', mimeType: 'application/json', buffer: saved });
+  await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'catalog.json', mimeType: 'application/json', buffer: saved });
   await page.getByRole('button', { name: 'Vypnout efekt Scanline Displace', exact: true }).waitFor();
   assert(mixed.equals(await exported()), 'Procedural stack project roundtrip');
   await page.screenshot({ path: 'test-results/catalog-effects.png' });
@@ -101,7 +101,7 @@ try {
   const dataUrl = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 32; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#aa0055'; ctx.fillRect(0, 0, 64, 32); return canvas.toDataURL(); });
   project.assets[0].dataUrl = dataUrl;
   project.assets[0].width = 64; project.assets[0].height = 32;
-  await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'bits.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
+  await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'bits.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(project)) });
   await page.getByRole('button', { name: 'Vypnout efekt Bit Plane Extractor', exact: true }).waitFor();
   async function pixel() { return readPixel(await exported(), 16, 16); }
   assert.deepEqual(await pixel(), [0, 0, 0, 255]);
@@ -110,7 +110,7 @@ try {
   await page.getByRole('button', { name: 'Odstranit efekt Bit Plane Extractor', exact: true }).click();
   const second = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 32; const ctx = canvas.getContext('2d'); ctx.fillStyle = '#123456'; ctx.fillRect(0, 0, 64, 32); return canvas.toDataURL().split(',')[1]; });
   await page.locator('input[accept^="image/"]').setInputFiles({ name: 'secondary.png', mimeType: 'image/png', buffer: Buffer.from(second, 'base64') });
-  await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor();
   await add('modulo-mix'); await set('Divisor hodnota', 0.7); await set('Gain hodnota', 0.8);
   const expected = [188, 52, 171].map(value => Math.round(((value / 255) % 0.7) / 0.7 * 0.8 * 255));
   const actual = await pixel();
@@ -121,7 +121,7 @@ try {
   const moduloImage = await exported();
   const moduloSave = page.waitForEvent('download'); await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click();
   const moduloFile = await readFile(await (await moduloSave).path());
-  await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'modulo.json', mimeType: 'application/json', buffer: moduloFile });
+  await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'modulo.json', mimeType: 'application/json', buffer: moduloFile });
   await page.getByRole('button', { name: 'Vypnout efekt Modulo Mix', exact: true }).waitFor();
   assert(moduloImage.equals(await exported()), 'Modulo two-input project roundtrip');
   assert.deepEqual(errors, []);

@@ -1,3 +1,4 @@
+import { assertProjectSize, MAX_PROJECT_BYTES } from './limits';
 import type { AssetManager } from '../assets/AssetManager';
 import type { LayerNode, RasterDocument } from '../document/types';
 export interface ProjectAsset { id: string; name: string; width: number; height: number; mimeType: string; file: string; dataUrl?: string }
@@ -18,15 +19,18 @@ export class ProjectSerializer {
     });
     return { format: 'rasterlab', version: 3, document, assets: manifest };
   }
-  static stringify(project: ProjectFile): string { return JSON.stringify(project, null, 2); }
+  static stringify(project: ProjectFile): string { const json = JSON.stringify(project, null, 2); assertProjectSize(json); return json; }
   static async portable(project: ProjectFile, assets: AssetManager): Promise<ProjectFile> {
-    const manifest = await Promise.all(project.assets.map(async asset => {
+    const estimated = project.assets.reduce((sum, asset) => sum + Math.ceil((assets.getBlob(asset.id)?.size ?? 0) / 3) * 4 + 128, new TextEncoder().encode(JSON.stringify(project)).byteLength);
+    if (estimated > MAX_PROJECT_BYTES) throw new Error('Přenosný projekt překračuje limit 300 MB.');
+    const manifest: ProjectAsset[] = [];
+    for (const asset of project.assets) {
       const blob = assets.getBlob(asset.id); if (!blob) throw new Error('Chybí zdrojový obrázek.');
       const dataUrl = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(new Error('Obrázek nelze přečíst.')); reader.readAsDataURL(blob);
       });
-      return { ...asset, dataUrl };
-    }));
+      manifest.push({ ...asset, dataUrl });
+    }
     return { ...project, assets: manifest };
   }
 }

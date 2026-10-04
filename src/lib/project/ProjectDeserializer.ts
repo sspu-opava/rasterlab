@@ -1,9 +1,11 @@
+import { assertScale } from '../document/transforms';
 import type { ProjectFile } from './ProjectSerializer';
 import { referencedAssets } from './ProjectSerializer';
 import type { LayerNode } from '../document/types';
 import { effectRegistry } from '../effects';
 import { validateParameters } from '../effects/core/parameters';
 import { generatorRegistry } from '../generators';
+import { assertProjectSize } from './limits';
 
 function object(value: unknown): Record<string, unknown> { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Neplatná struktura projektu.'); return value as Record<string, unknown>; }
 function text(value: unknown, max = 256): asserts value is string { if (typeof value !== 'string' || value.length === 0 || value.length > max) throw new Error('Neplatný textový údaj projektu.'); }
@@ -14,7 +16,7 @@ function flag(value: unknown): void { if (typeof value !== 'boolean') throw new 
 export class ProjectDeserializer {
   /** Migration entry point: reject unknown versions before touching live state. */
   static parse(json: string): ProjectFile {
-    if (json.length > 300 * 1024 * 1024) throw new Error('Projekt přesahuje maximální velikost 300 MB.');
+    assertProjectSize(json);
     const raw: unknown = JSON.parse(json);
     const project = object(raw);
     if (project.format !== 'rasterlab' || ![1, 2, 3].includes(Number(project.version)) || typeof project.version !== 'number') throw new Error('Nepodporovaný formát nebo verze projektu.');
@@ -37,7 +39,7 @@ export class ProjectDeserializer {
       if (!Array.isArray(values) || values.length > 100 || depth > 12) throw new Error('Neplatný seznam vrstev.');
       for (const value of values) {
         const layer = object(value); id(layer.id); if (ids.has(layer.id) || ids.size >= 100) throw new Error('Duplicitní ID nebo příliš mnoho vrstev.'); ids.add(layer.id);
-        text(layer.name); flag(layer.visible); flag(layer.locked); number(layer.opacity, 0, 1); point(layer.position); point(layer.scale); number(layer.rotation);
+        text(layer.name); flag(layer.visible); flag(layer.locked); number(layer.opacity, 0, 1); point(layer.position); assertScale(layer.scale); number(layer.rotation);
         if (!['normal', 'multiply', 'screen', 'overlay', 'difference', 'add'].includes(String(layer.blendMode))) throw new Error('Neplatný blend mode.');
         if (layer.type === 'group') visit(layer.children, depth + 1);
         else if (layer.type === 'raster') { id(layer.assetId); if (!assets.has(layer.assetId)) throw new Error('Chybějící asset reference.'); }

@@ -23,7 +23,7 @@ export async function effectHarness() {
     browser, page, errors, exported, save,
     async add(id) { await page.getByRole('combobox', { name: 'Typ nového efektu' }).selectOption(id); await page.getByRole('button', { name: 'Přidat efekt', exact: true }).click(); },
     async set(label, value) { const input = page.getByRole('spinbutton', { name: label, exact: true }); await input.fill(String(value)); await input.press('Tab'); },
-    async load(file) { await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'test.json', mimeType: 'application/json', buffer: file }); await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click({ trial: true }); },
+    async load(file) { await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'test.json', mimeType: 'application/json', buffer: file }); await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click({ trial: true }); },
     async decoded(buffer, mime = 'image/png') { return page.evaluate(async ({ base64, mime }) => {
       const image = new Image(); image.src = `data:${mime};base64,${base64}`; await image.decode();
       const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;

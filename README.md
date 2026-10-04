@@ -1,6 +1,8 @@
 # RasterLab
 
-Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 0.10 nabízí 53 efektů, osm samostatných generátorů, masky z jiné vrstvy, vnořené skupiny s duplikací, knihovnu presetů a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
+Nedestruktivní experimentální rastrový editor v Tauri 2, Svelte 5, TypeScriptu a PixiJS 8. Verze 1.0 nabízí 53 efektů, osm samostatných generátorů, masky z jiné vrstvy, vnořené skupiny s duplikací, knihovnu presetů a automatickou obnovu rozpracovaného projektu. Efekty pokrývají všechny položky `katalog.md`. Rozhraní vychází z `gui/gui-navrh.png`.
+
+[Český návod](docs/navod.md) · [Vydání 1.0 a rozsah ověření](docs/vydani-1.0.md)
 
 ## Spuštění
 
@@ -31,7 +33,7 @@ npm run desktop:build
 
 Desktopový instalátor vzniká v `src-tauri/target/release/bundle/nsis/`. V nově otevřeném terminálu musí být dostupné `cargo` a `rustc`.
 
-Připravené distribuční soubory této iterace: `releases/RasterLab-0.10.0.exe` a `releases/RasterLab-0.10.0-setup.exe`. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
+Distribuční soubory: `releases/RasterLab-1.0.0.exe` a `releases/RasterLab-1.0.0-setup.exe`; kontrolní součty a ověřovací protokol jsou přiložené. Ověřovací desktop build používá samostatnou cache `CARGO_TARGET_DIR=src-tauri/target-v02`.
 
 Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v druhém PowerShell terminálu `$env:RASTERLAB_TEST_URL='http://127.0.0.1:4173'; npm run test:features; npm run test:browser`. Testy pak aplikují stejnou CSP jako Tauri.
 
@@ -70,7 +72,7 @@ Pro test produkčního frontendu spusťte `npm run preview -- --port 4173` a v d
 
 ## Projekty a klávesové zkratky
 
-Desktop ukládá zvolený `.json` a vedle něj adresář `assets/`. Přenášejte společně JSON i složku. Ukládají se pouze obrázky používané dokumentem; obrázky zůstávají v původním formátu. Prohlížeč stahuje přenosný JSON s vloženými daty obrázků, který lze otevřít i v desktopové verzi. ZIP / `.rlab` zatím není implementován. Neuložené změny označuje hvězdička u názvu dokumentu.
+Desktop ukládá zvolený `.json` a vedle něj adresář `assets/`. Přenášejte společně JSON i složku. Ukládají se pouze obrázky používané dokumentem; obrázky zůstávají v původním formátu. Prohlížeč stahuje přenosný JSON s vloženými daty obrázků, který lze otevřít i v desktopové verzi. Tlačítko Uložit .rlab vytvoří jeden přenosný ZIP/STORE soubor s manifestem a původními obrázky. Neuložené změny označuje hvězdička u názvu dokumentu.
 
 | Operace | Zkratka |
 | --- | --- |
@@ -80,7 +82,7 @@ Desktop ukládá zvolený `.json` a vedle něj adresář `assets/`. Přenášejt
 | Uložit / uložit jako | Ctrl+S / Ctrl+Shift+S |
 | Undo / redo | Ctrl+Z / Ctrl+Shift+Z nebo Ctrl+Y |
 | Export | Ctrl+E |
-| Výběr / pan | V / H |
+| Přesun vrstvy / pan | V / H |
 | Fit / 100 % | F / 1 |
 | Dočasný pan | Mezerník nebo prostřední tlačítko |
 
@@ -88,8 +90,12 @@ Historie uchovává nejvýše 200 příkazů, nepersistuje se v projektu a při 
 
 Presety a oblíbené efekty se ukládají místně do nastavení aplikace. Zotavovací kopie je v IndexedDB úložišti WebView/prohlížeče; nemaže originály a nepřepisuje ručně uložený soubor. Aplikace uchovává jednu poslední kopii pro dané úložiště. Obnovený dokument zůstává neuložený až do Ctrl+S. Vymazání dat aplikace odstraní i místní nastavení a kopii obnovy.
 
-Projekty verze 1 a 2 se při otevření převedou na verzi 3; nové projekty vyžadují RasterLab 0.9. Další iterace: vícečetný výběr, rozpuštění skupin, měření výkonu a přenosný archiv projektu. Vícevstupové efekty používají dvě vrstvy. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
+Projekty verze 1 a 2 se při otevření převedou na verzi 3; nové projekty vyžadují RasterLab 0.9. Verze 0.11 přidává vícečetný výběr sousedních vrstev, bezpečné rozpuštění neutrální skupiny, nastavení dokumentu a přenosný archiv. Vícevstupové efekty používají dvě vrstvy. Koláže mají nejvýše 64 fragmentů, Crumple 32 záhybů. Maximální rozměr dokumentu i assetu je 8192 px; reálná kapacita GPU a paměti závisí na počtu vrstev a efektů.
 
 Podrobnosti: [architektura](docs/architecture.md), [Effect API](docs/effect-api.md), [projektový formát](docs/project-format.md), [vykreslování](docs/rendering.md), [ověření](docs/validation.md).
 
 Další rozvoj: [návrh vylepšení, priority a doporučené etapy](docs/navrh-vylepseni.md).
+
+Před vydáním 1.0: [důkladná revize funkčnosti, potvrzené chyby a prioritizované opravy](docs/revize-pred-1.0.md). Revize upozorňuje také na mezery ovládání, které dosavadní pixelové testy efektů nepokrývaly.
+
+Stabilizace 0.11: [opravy a přesné meze](docs/stabilizace-0.11.md). Úplná kontrola: `npm run release:check -- --desktop` (vyžaduje volné porty 4173/5173); verze se synchronizuje `npm run version:sync -- 1.0.0`. Náročné dokumenty podléhají GPU preflightu 512 MiB. Desktopové přenosy mají limit 32 MiB; browserové projekty 300 MiB. Připraven je [nativní release protokol](docs/release-native-protocol.md). Veřejná distribuce a licence čekají na rozhodnutí držitele práv.

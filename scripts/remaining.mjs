@@ -20,9 +20,9 @@ try {
     });
   });
   await page.locator('input[accept^="image/"]').setInputFiles(images.map((base64, index) => ({ name: index ? 'primary.png' : 'secondary.png', mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') })));
-  await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor(); await page.getByRole('button', { name: 'Skrýt secondary', exact: true }).click();
+  await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor(); await page.getByRole('button', { name: 'Skrýt secondary', exact: true }).click();
   const original = await h.exported(), originalPixels = await h.decoded(original);
-  await page.getByRole('button', { name: 'Effects', exact: true }).click();
+  await page.getByRole('button', { name: 'Efekty', exact: true }).click();
   for (const [id, name] of effects) {
     await h.add(id); const changed = await h.exported(); assert(!changed.equals(original), `${name} must change pixels`);
     assert(changed.equals(await h.exported()), `${name} repeated evaluation`); gallery.push({ name, base64: changed.toString('base64') });

@@ -32,10 +32,10 @@ try {
     });
   });
   await page.locator('input[accept^="image/"]').setInputFiles(images.map((base64, index) => ({ name: index ? 'primary.png' : 'secondary.png', mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') })));
-  await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor();
   await page.getByRole('button', { name: 'Skrýt secondary', exact: true }).click();
   const original = await h.exported(), originalPixels = await h.decoded(original), fixture = await h.save();
-  await page.getByRole('button', { name: 'Effects', exact: true }).click();
+  await page.getByRole('button', { name: 'Efekty', exact: true }).click();
   for (const [id, name] of effects) {
     await h.add(id);
     const changed = await h.exported(); assert(!changed.equals(original), `${name} must affect the image`);
@@ -114,7 +114,7 @@ try {
   const solid = JSON.parse(fixture);
   const solidImages = await page.evaluate(() => { const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 96; const ctx = canvas.getContext('2d'); return ['#aacc55', '#ff0000'].map(color => { ctx.fillStyle = color; ctx.fillRect(0, 0, 128, 96); return canvas.toDataURL(); }); });
   solid.assets.forEach(asset => { asset.dataUrl = solidImages[asset.id === solid.document.layers[0].assetId ? 1 : 0]; });
-  await h.load(Buffer.from(JSON.stringify(solid))); await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor();
+  await h.load(Buffer.from(JSON.stringify(solid))); await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor();
   await h.add('logic-matrix');
   const expected = { and: [170, 0, 0], or: [255, 204, 85], nand: [85, 255, 255], nor: [0, 51, 170], xnor: [170, 51, 170] };
   for (const [operation, rgb] of Object.entries(expected)) {

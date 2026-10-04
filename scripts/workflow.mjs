@@ -5,8 +5,8 @@ import { expect } from '@playwright/test';
 const h = await effectHarness(), { page } = h;
 page.on('dialog', dialog => dialog.accept());
 const json = async () => JSON.parse(await h.save());
-const effects = () => page.getByRole('button', { name: 'Effects', exact: true });
-const selectTarget = async () => { await page.getByRole('button', { name: 'Layers 2', exact: true }).click(); await page.getByRole('button', { name: /target Raster layer/ }).click(); await effects().click(); };
+const effects = () => page.getByRole('button', { name: 'Efekty', exact: true });
+const selectTarget = async () => { await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).click(); await page.getByRole('button', { name: /target Rastrová vrstva/ }).click(); await effects().click(); };
 const dialog = () => page.getByRole('dialog');
 const savePreset = async name => { await page.getByRole('button', { name: 'Uložit stack', exact: true }).click(); await page.getByRole('textbox', { name: 'Název presetu' }).fill(name); await dialog().getByRole('button', { name: 'Uložit preset', exact: true }).click(); };
 const apply = async (replace = false, role) => { if (role) await dialog().getByRole('combobox', { name: /^Zdroj presetu:/ }).selectOption(role); if (replace) await dialog().getByRole('combobox', { name: 'Umístění presetu' }).selectOption({ label: 'Nahradit celý stack' }); await dialog().getByRole('button', { name: 'Použít preset', exact: true }).click(); };
@@ -16,7 +16,7 @@ try {
   await page.getByLabel('Šířka / px').fill('128'); await page.getByLabel('Výška / px').fill('96'); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
   const base64 = await page.evaluate(() => { const c = document.createElement('canvas'); c.width = 128; c.height = 96; const ctx = c.getContext('2d'), image = ctx.createImageData(128, 96); for (let y = 0; y < 96; y++) for (let x = 0; x < 128; x++) image.data.set([(x * 13 + y * 7) % 256, (y * 9) % 256, (x * 3) % 256, x < 4 ? 0 : 255], (y * 128 + x) * 4); ctx.putImageData(image, 0, 0); return c.toDataURL().split(',')[1]; });
   await page.locator('input[accept^="image/"]').setInputFiles(['reference.png', 'target.png'].map(name => ({ name, mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') })));
-  await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor(); await page.getByRole('button', { name: 'Skrýt reference', exact: true }).click(); await effects().click();
+  await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor(); await page.getByRole('button', { name: 'Skrýt reference', exact: true }).click(); await effects().click();
   const original = await h.exported();
   const search = page.getByRole('textbox', { name: 'Hledat efekty' }), selector = page.getByRole('combobox', { name: 'Typ nového efektu' });
   await search.fill('xyz-no-match'); assert.equal(await selector.locator('option').count(), 0); assert(await page.getByRole('button', { name: 'Přidat efekt', exact: true }).isDisabled());
@@ -25,13 +25,13 @@ try {
   await search.fill(''); await h.add('noise'); await h.set('Seed', 123); await h.set('Amount hodnota', .2);
   const single = await h.exported(); await page.getByRole('button', { name: 'Duplikovat efekt', exact: true }).click();
   let model = await json(); assert.equal(model.document.layers[0].effects.length, 2); assert.notEqual(model.document.layers[0].effects[0].id, model.document.layers[0].effects[1].id); assert.deepEqual(model.document.layers[0].effects[0].parameters, model.document.layers[0].effects[1].parameters);
-  await h.set('Amount hodnota', .8); await page.keyboard.press('Control+z'); await page.keyboard.press('Control+z'); assert(single.equals(await h.exported()), 'Duplicate undo restores source effect');
+  await h.set('Amount hodnota', .8); await page.locator('.document-tab').click(); await page.keyboard.press('Control+z'); await page.keyboard.press('Control+z'); assert(single.equals(await h.exported()), 'Duplicate undo restores source effect');
   await page.getByRole('button', { name: 'Pouze oblíbené efekty' }).click();
   await h.add('xor'); await page.getByRole('button', { name: 'Vypnout efekt XOR', exact: true }).click();
   const stackPixels = await h.exported(), baseline = await h.save(), baselineModel = JSON.parse(baseline);
   const [targetId, referenceId] = baselineModel.document.layers.map(layer => layer.id);
   await savePreset('Můj experiment');
-  await page.getByRole('button', { name: 'Presets', exact: true }).click();
+  await page.getByRole('button', { name: 'Presety', exact: true }).click();
   const card = page.locator('.preset-card').filter({ has: page.getByText('Můj experiment', { exact: true }) });
   const pending = page.waitForEvent('download'); await card.getByRole('button', { name: 'Exportovat preset Můj experiment' }).click(); const presetBytes = await readFile(await (await pending).path()), preset = JSON.parse(presetBytes);
   assert.equal(preset.format, 'rasterlab-preset'); assert.equal(preset.effects.length, 2); assert.equal(preset.roles.length, 1); assert(!presetBytes.toString().includes(referenceId)); assert.equal(preset.effects[0].parameters.seed, 123); assert.equal(preset.effects[1].enabled, false);
@@ -45,7 +45,7 @@ try {
   await page.getByRole('button', { name: 'Kopírovat stack' }).click();
   // Remove the original reverse edge before binding a copy back to the source layer.
   await page.getByRole('combobox', { name: 'Druhá vrstva', exact: true }).selectOption('');
-  await page.getByRole('button', { name: 'Layers 2', exact: true }).click(); await page.getByRole('button', { name: /reference Raster layer/ }).click(); await effects().click();
+  await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).click(); await page.getByRole('button', { name: /reference Rastrová vrstva/ }).click(); await effects().click();
   await page.getByRole('button', { name: 'Vložit stack' }).click(); await apply(false, targetId);
   model = await json(); assert.equal(model.document.layers[1].effects.length, 2); assert.equal(model.document.layers[1].effects[1].inputs.secondary, targetId);
   assert.notEqual(model.document.layers[1].effects[0].id, model.document.layers[0].effects[0].id);
@@ -75,8 +75,8 @@ try {
   const recovery = await page.evaluate(async () => { const db = await new Promise((resolve, reject) => { const request = indexedDB.open('rasterlab-recovery', 1); request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); }); return new Promise((resolve, reject) => { const tx = db.transaction('snapshots'), request = tx.objectStore('snapshots').get('workspace'); request.onsuccess = () => { const record = request.result; resolve({ effects: record.project.document.layers[0].effects, blobs: Object.values(record.blobs).map(blob => ({ size: blob.size, type: blob.type })) }); db.close(); }; request.onerror = () => reject(request.error); }); });
   assert.equal(recovery.effects[0].parameters.amount, .4); assert.equal(recovery.blobs.length, 2); assert(recovery.blobs.every(blob => blob.size > 0 && blob.type === 'image/png'));
   await page.reload(); await page.getByRole('button', { name: 'Obnovit projekt', exact: true }).waitFor();
-  await page.getByRole('button', { name: 'Presets', exact: true }).click(); assert.equal(await page.locator('.preset-card').count(), 12, 'Presets persist across app reload');
-  await page.getByRole('button', { name: 'Obnovit projekt', exact: true }).click(); await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor(); assert((await page.locator('.document-tab').innerText()).includes('*')); assert(recoveredPixels.equals(await h.exported()), 'Recovered project reproduces GPU pixels');
+  await page.getByRole('button', { name: 'Presety', exact: true }).click(); assert.equal(await page.locator('.preset-card').count(), 12, 'Presets persist across app reload');
+  await page.getByRole('button', { name: 'Obnovit projekt', exact: true }).click(); await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor(); assert((await page.locator('.document-tab').innerText()).includes('*')); assert(recoveredPixels.equals(await h.exported()), 'Recovered project reproduces GPU pixels');
   await effects().click(); await page.getByRole('button', { name: 'Pouze oblíbené efekty' }).click(); assert.equal(await selector.locator('option').count(), 1, 'Favorites persist across reload');
   await page.screenshot({ path: 'test-results/workflow-presets.png' });
   await h.save(); await page.reload(); await page.locator('.canvas-host canvas').waitFor(); await page.waitForTimeout(400); assert.equal(await page.getByRole('button', { name: 'Obnovit projekt', exact: true }).count(), 0, 'Manual save clears stale recovery');

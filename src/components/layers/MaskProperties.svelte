@@ -1,13 +1,13 @@
 <script lang="ts">
   import type { LayerNode } from '../../lib/document/types';
-  import { layerEntries, mapLayers, assertLayerGraph } from '../../lib/document/layers';
+  import { layerEntries, layerPath, mapLayers, assertLayerGraph } from '../../lib/document/layers';
   import { setLayerMask, effectErrors } from '../../lib/editor/store';
   let { layer, layers }: { layer: LayerNode; layers: LayerNode[] } = $props();
   function valid(sourceId: string): boolean { try { assertLayerGraph(mapLayers(layers, item => item.id === layer.id ? { ...item, mask: { sourceId, enabled: true, mode: 'luminance', invert: false, strength: 1, feather: 0 } } : item)); return true; } catch { return false; } }
   const candidates = $derived(layerEntries(layers).map(entry => entry.layer).filter(item => item.id !== layer.id && valid(item.id)));
 </script>
 <div class="property-divider">MASKA Z VRSTVY</div>
-<label class="property-wide"><span>Zdroj masky</span><select aria-label="Zdroj masky" disabled={layer.locked} value={layer.mask?.sourceId ?? ''} onchange={event => setLayerMask(layer.id, event.currentTarget.value ? { sourceId: event.currentTarget.value } : null)}><option value="">Bez masky</option>{#each candidates as item}<option value={item.id}>{item.name}</option>{/each}</select></label>
+<label class="property-wide"><span>Zdroj masky</span><select aria-label="Zdroj masky" disabled={layer.locked} value={layer.mask?.sourceId ?? ''} onchange={event => setLayerMask(layer.id, event.currentTarget.value ? { sourceId: event.currentTarget.value } : null)}><option value="">Bez masky</option>{#each candidates as item}<option value={item.id}>{layerPath(layers, item.id)}</option>{/each}</select></label>
 {#if layer.mask}
   <label class="property-wide"><span>Režim</span><select aria-label="Režim masky" value={layer.mask.mode} disabled={layer.locked} onchange={event => setLayerMask(layer.id, { mode: event.currentTarget.value as 'alpha' | 'luminance' })}><option value="luminance">Jas × alfa</option><option value="alpha">Alfa kanál</option></select></label>
   <div class="mask-toggles"><label><input type="checkbox" aria-label="Maska aktivní" checked={layer.mask.enabled} disabled={layer.locked} onchange={event => setLayerMask(layer.id, { enabled: event.currentTarget.checked })}/> Aktivní</label><label><input type="checkbox" aria-label="Invertovat masku" checked={layer.mask.invert} disabled={layer.locked} onchange={event => setLayerMask(layer.id, { invert: event.currentTarget.checked })}/> Invertovat</label></div>

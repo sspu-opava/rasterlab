@@ -1,3 +1,5 @@
+import { imageDimensions } from './dimensions';
+import { assertFileSize, MAX_PROJECT_BYTES } from '../project/limits';
 import { Texture } from 'pixi.js';
 import { log } from '../utils/logger';
 
@@ -14,15 +16,21 @@ export class AssetManager {
   async import(file: File, id: string = crypto.randomUUID()): Promise<AssetRecord> {
     if (this.assets.has(id)) throw new Error('Duplicitní ID assetu.');
     if (!acceptedTypes.has(file.type)) throw new Error('Podporované formáty: PNG, JPEG a WebP.');
-    if (file.size > 100 * 1024 * 1024) throw new Error('Obrázek je příliš velký (maximum 100 MB).');
+    assertFileSize(file);
+    if (this.assets.size >= 100 || [...this.assets.values()].reduce((sum, item) => sum + item.file.size, file.size) > MAX_PROJECT_BYTES) throw new Error('Knihovna překračuje limit 100 obrázků nebo 300 MB. Vyčistěte nepoužívané zdroje.');
+    const dimensions = await imageDimensions(file);
+    const pixels = dimensions.width * dimensions.height * 4;
+    if (Math.min(dimensions.width, dimensions.height) < 1 || Math.max(dimensions.width, dimensions.height) > 8192) throw new Error('Maximální rozměr obrázku je 8192 px.');
+    if ([...this.assets.values()].reduce((sum, item) => sum + item.record.width * item.record.height * 4, pixels) > 256 * 1024 * 1024) throw new Error('Dekódované zdroje překračují limit knihovny 256 MiB. Vyčistěte knihovnu.');
     const url = URL.createObjectURL(file);
     const image = new Image();
     image.src = url;
     try {
       await image.decode();
-      if (image.naturalWidth > 8192 || image.naturalHeight > 8192) {
+      if ((image.naturalWidth * image.naturalHeight !== dimensions.width * dimensions.height) || image.naturalWidth > 8192 || image.naturalHeight > 8192) {
         throw new Error('Maximální rozměr obrázku je 8192 px.');
       }
+      if (this.assets.has(id) || this.assets.size >= 100 || [...this.assets.values()].reduce((sum, item) => sum + item.file.size, file.size) > MAX_PROJECT_BYTES) throw new Error('Knihovna dosáhla limitu nebo obsahuje duplicitní ID.');
       const record: AssetRecord = {
         id, name: file.name, width: image.naturalWidth,
         height: image.naturalHeight, mimeType: file.type, url,

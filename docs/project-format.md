@@ -1,6 +1,6 @@
 # Projektový formát 3
 
-Desktop uloží uživatelem zvolený JSON a sousední `assets/` s originálními PNG/JPEG/WebP. Přenášejte oba. ZIP / `.rlab` není implementován.
+Desktop uloží uživatelem zvolený JSON a sousední `assets/` s originálními PNG/JPEG/WebP. Přenášejte oba. Od 0.11 lze také uložit přenosný `.rlab` jako ZIP/STORE. Obsahuje project.json a původní soubory assets, ověřuje CRC a cesty; záznamy se nerozbalují na disk.
 
 ```json
 {
@@ -13,7 +13,7 @@ Desktop uloží uživatelem zvolený JSON a sousední `assets/` s originálními
 
 Rastrová vrstva odkazuje na `assetId`. Generátorová vrstva má `type: "generated"`, `generatorId` a `parameters`; nepoužívá asset. ID generátorů jsou `noise`, `checker`, `lines`, `dots`, `fbm`, `voronoi`, `interference` a `radial`. Skupina má `type: "group"` a rekurzivní `children`. Serializují se transformace, krytí, blend, visibility/lock a effect instance parameters/inputs/enabled. Pixi objekty a runtime URL v projektu nejsou. Nepoužité importy a historie se neukládají.
 
-Prohlížeč používá stejnou obálku a přidá k assetům `dataUrl: "data:image/png;base64,..."`. Tento přenosný JSON lze otevřít také v Tauri; příští desktopový save převede data do `assets/`. Browser načítá pouze přenosné JSON; desktop načítá i adresářové projekty. Nejde o ZIP podporu.
+Prohlížeč používá stejnou obálku a přidá k assetům `dataUrl: "data:image/png;base64,..."`. Tento přenosný JSON lze otevřít také v Tauri; příští desktopový save převede data do `assets/`. Browser načítá pouze přenosné JSON; desktop načítá i adresářové projekty. Browser i desktop také otevřou RasterLab `.rlab` archiv.
 
 ## Validace a migrations
 
@@ -21,14 +21,16 @@ ProjectDeserializer.parse přijímá verze 1, 2 a 3 a migruje je v paměti na v3
 
 Volitelné `layer.mask` obsahuje `sourceId`, `enabled`, `mode: "alpha" | "luminance"`, `invert`, `strength` v rozsahu 0–1 a `feather` v rozsahu 0–64 dokumentových px. Odkaz musí mířit na existující vrstvu a nesmí tvořit cyklus ani při vypnuté masce. Výstup masky se použije po stacku efektů, před krytím/blendem. Historický neimplementovaný klíč `maskId` se odmítá; nenahrazuje nový objekt masky.
 
-Bitmapy se dekódují do dočasného AssetManageru, rozměry se porovnají s manifestem a teprve po úspěchu se vymění dokument. Chybný soubor zachová současný dokument. Limity: 100 vrstev/assetů, 32 efektů na vrstvu, 12 úrovní skupin, 8192 px na stranu, 100 MB na bitmapu a 300 MB na projektová data. Praktický počet efektů omezuje GPU paměť.
+Bitmapy se dekódují do dočasného AssetManageru, rozměry se porovnají s manifestem a teprve po úspěchu se vymění dokument. Chybný soubor zachová současný dokument. Limity: 100 vrstev/assetů, 32 efektů na vrstvu, 12 úrovní skupin, 8192 px na stranu, 100 MiB na bitmapu, 300 MiB na browserový projekt/archiv a 32 MiB na desktopový IPC přenos JSON+assetů. Knihovna má rozpočet dekódovaných pixelů 256 MiB. Praktický počet efektů omezuje GPU paměť.
 
 ## Filesystem
 
 Rust přijímá pouze validované cesty `assets/<ID>.<extension>` odpovídající MIME; relativní traversal a únik přes symlink mimo projekt odmítá. Originál s existujícím ID se nepřepisuje jinými bytes: konflikt je chyba. Assets se zapisují přes temporary soubor a rename; JSON manifest se atomicky přepíše až poslední. Starý projekt zůstane čitelný, pokud save před commit selže. Staré nepoužité asset soubory se automaticky nemažou.
 
-Ctrl+S používá poslední desktopovou cestu; Ctrl+Shift+S zobrazí výběr jiné cesty. Browser každý save stáhne nový portable JSON. Uložený immutable model určuje dirty flag. Otevření a nový dokument resetují historii. Native close a otevření projektu vyžadují rozhodnutí o skutečně neuložených změnách.
+Ctrl+S používá poslední desktopovou cestu; Ctrl+Shift+S zobrazí výběr jiné cesty. Browser standardní save stáhne portable JSON; samostatné tlačítko Uložit .rlab stáhne archiv. Uložený immutable model určuje dirty flag. Otevření a nový dokument resetují historii. Native close a otevření projektu vyžadují rozhodnutí o skutečně neuložených změnách.
 
 Export je oddělen od projektu: full-resolution PNG/JPEG/WebP, kvalita JPEG/WebP, bílé podložení průhlednosti JPEG. Export neobsahuje editorový checkerboard, hranici, zoom ani pan.
 
 Od verze 0.7 existují dva další oddělené formáty: `.preset.json` s obálkou `rasterlab-preset`, verze 1, a interní IndexedDB kopie `rasterlab-recovery`, verze 1. Preset neobsahuje assety ani masku vrstvy; kopie obnovy ukládá projekt spolu s původními Bloby v jedné transakci. V aplikaci 0.9 je vložený projekt v3; starší kopie s projektem v1/v2 se migrují při načtení. Podrobnosti v [návodu 0.7](workflow-0.7.md) a [návodu masek](masks-0.9.md).
+
+Více podrobností o limitech a knihovně posledních projektů: [stabilizace 0.11](stabilizace-0.11.md).

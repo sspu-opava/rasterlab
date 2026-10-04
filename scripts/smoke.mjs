@@ -76,7 +76,9 @@ try {
     return ['image/jpeg', 'image/webp'].map(type => ({ type, data: canvas.toDataURL(type).split(',')[1] }));
   });
   await page.locator('input[accept^="image/"]').setInputFiles(formats.map((format, i) => ({ name: i === 0 ? 'test.jpg' : 'test.webp', mimeType: format.type, buffer: Buffer.from(format.data, 'base64') })));
-  await page.getByRole('button', { name: 'Skrýt test', exact: true }).first().waitFor();
+  // Both files decode asynchronously; seeing the first layer does not finish the batch.
+  await page.waitForFunction(() => document.querySelectorAll('.layer-row').length === 4);
+  await page.getByRole('button', { name: 'Importovat obrázky (Ctrl+I)', exact: true }).click({ trial: true });
   assert.equal(await page.locator('.layer-row').count(), 4);
   await page.locator('input[accept^="image/"]').setInputFiles({ name: 'invalid.png', mimeType: 'image/png', buffer: Buffer.from('invalid bitmap') });
   await page.getByRole('alert').waitFor();
@@ -87,10 +89,10 @@ try {
   assert(errors[0].includes('[DOCUMENT]'));
   errors.length = 0;
   await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click();
+  await page.getByRole('button', { name: 'Zahodit změny', exact: true }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Šířka / px').fill('1600');
   await dialog.getByLabel('Výška / px').fill('900');
-  await dialog.getByRole('checkbox').check();
   await dialog.getByRole('button', { name: 'Vytvořit dokument' }).click();
   await page.getByText('Prostor pro váš další experiment').waitFor();
   assert.equal(await page.locator('.status-size').innerText(), '1600 × 900 px');

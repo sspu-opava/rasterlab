@@ -9,6 +9,7 @@ export class CommandHistory<T> {
   get dirty(): boolean { return this.current !== this.saved; }
   get undoLabel(): string { return this.undoStack.at(-1)?.label ?? ''; }
   get redoLabel(): string { return this.redoStack.at(-1)?.label ?? ''; }
+  retainedValues(): T[] { return [this.current, ...this.undoStack.flatMap(command => [command.before, command.after]), ...this.redoStack.flatMap(command => [command.before, command.after])]; }
   execute(command: Omit<Command<T>, 'timestamp'>, merge = false): void {
     const timestamp = Date.now(); const previous = this.undoStack.at(-1);
     if (merge && command.mergeKey && previous?.mergeKey === command.mergeKey && previous.after !== this.saved && timestamp - previous.timestamp < 750) { previous.after = command.after; previous.timestamp = timestamp; }

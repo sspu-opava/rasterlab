@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { effectHarness } from './effect-harness.mjs';
+const h = await effectHarness(), { page } = h, results = [];
+const check = (id, condition) => { assert(condition, id); results.push({ id, passed: true }); };
+try {
+  await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click();
+  await page.getByLabel('Šířka / px').fill('96'); await page.getByLabel('Výška / px').fill('64');
+  await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
+  await page.getByRole('button', { name: 'Generátory', exact: true }).click();
+  await page.getByRole('button', { name: 'Přidat generátor Checker', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Název vrstvy' }).fill('Název bez Tab');
+  let pending = page.waitForEvent('download'); await page.keyboard.press('Control+s');
+  let model = JSON.parse(await readFile(await (await pending).path(), 'utf8'));
+  check('DRAFT-NAME', model.document.layers[0].name === 'Název bez Tab');
+  await h.exported(); await page.getByRole('button', { name: 'Skrýt Název bez Tab', exact: true }).click(); await h.set('Cell size / px hodnota', 8); await page.getByRole('button', { name: 'Přizpůsobit dokument pracovní ploše (F)' }).click(); await page.getByRole('button', { name: 'Zobrazit Název bez Tab', exact: true }).click();
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))); const host = await page.locator('.canvas-host').boundingBox(), zoom = Number((await page.locator('.statusbar > span').nth(1).innerText()).match(/\d+/)[0]) / 100;
+  const previewPixel = await h.decoded(await page.screenshot({ clip: { x: Math.round(host.x + host.width / 2 + (12 - 48) * zoom), y: Math.round(host.y + host.height / 2 + (4 - 32) * zoom), width: 1, height: 1 } })); check('HIDDEN-PREVIEW-INVALIDATION', previewPixel.pixels[0] === 255 && previewPixel.pixels[1] === 255 && previewPixel.pixels[2] === 255);
+  await page.getByRole('spinbutton', { name: 'Pozice X', exact: true }).fill('7');
+  pending = page.waitForEvent('download'); await page.keyboard.press('Control+s');
+  model = JSON.parse(await readFile(await (await pending).path(), 'utf8')); check('DRAFT-POSITION', model.document.layers[0].position.x === 7);
+  await page.getByRole('button', { name: 'Přidat generátor Noise', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Seed', exact: true }).fill('321');
+  pending = page.waitForEvent('download'); await page.keyboard.press('Control+s'); model = JSON.parse(await readFile(await (await pending).path(), 'utf8')); check('DRAFT-SEED', model.document.layers[0].parameters.seed === 321);
+  await page.getByRole('spinbutton', { name: 'Měřítko X', exact: true }).fill('1.25');
+  pending = page.waitForEvent('download'); await page.keyboard.press('Control+s'); model = JSON.parse(await readFile(await (await pending).path(), 'utf8')); check('DRAFT-SCALE', model.document.layers[0].scale.x === 1.25);
+  await page.getByRole('button', { name: 'Efekty', exact: true }).click(); await h.add('threshold');
+  await page.getByRole('spinbutton', { name: 'Threshold hodnota', exact: true }).fill('0.8');
+  pending = page.waitForEvent('download'); await page.keyboard.press('Control+s'); model = JSON.parse(await readFile(await (await pending).path(), 'utf8')); check('DRAFT-EFFECT-NUMBER', model.document.layers[0].effects[0].parameters.threshold === 0.8);
+  await page.getByRole('button', { name: /^Vrstvy / }).click();
+  await page.getByRole('button', { name: 'Název bez Tab Generátor', exact: true }).click();
+  await page.getByRole('button', { name: 'Noise Generátor', exact: true }).click({ modifiers: ['Control'] });
+  const beforeGroup = await h.exported();
+  await page.getByRole('button', { name: 'Seskupit vybranou vrstvu', exact: true }).click();
+  check('MULTI-GROUP-PIXELS', beforeGroup.equals(await h.exported()));
+  await page.getByRole('button', { name: 'Rozpustit', exact: true }).click();
+  check('UNGROUP-PIXELS', beforeGroup.equals(await h.exported()));
+  await page.getByRole('button', { name: 'Dokument…', exact: true }).click();
+  await page.getByLabel('Název dokumentu', { exact: true }).fill('Příliš žluťoučký'); await page.getByLabel('Šířka dokumentu', { exact: true }).fill('100');
+  await page.getByRole('button', { name: 'Použít', exact: true }).click();
+  model = JSON.parse(await h.save()); check('DOCUMENT-SETTINGS', model.document.name === 'Příliš žluťoučký' && model.document.width === 100);
+  await page.keyboard.press('Control+z'); model = JSON.parse(await h.save()); check('DOCUMENT-SETTINGS-UNDO', model.document.width === 96);
+  pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Uložit .rlab', exact: true }).click();
+  const archive = await readFile(await (await pending).path()); check('ARCHIVE-ZIP', archive.readUInt32LE(0) === 0x04034b50);
+  const pixels = await h.exported(); await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'roundtrip.rlab', mimeType: 'application/zip', buffer: archive });
+  await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click({ trial: true }); check('ARCHIVE-PIXELS', pixels.equals(await h.exported()));
+  await page.getByRole('button', { name: 'Odstranit vybranou vrstvu', exact: true }).click();
+  await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click(); await page.getByRole('button', { name: 'Zrušit', exact: true }).click();
+  check('UNSAVED-CANCEL', await page.getByRole('dialog').count() === 0 && JSON.parse(await h.save()).document.layers.length === 1);
+  await page.getByRole('button', { name: 'Odstranit vybranou vrstvu', exact: true }).click();
+  await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click();
+  check('UNSAVED-EMPTY', await page.getByRole('heading', { name: 'Uložit rozpracovaný projekt?' }).count() === 1);
+  await page.getByRole('button', { name: 'Zahodit změny', exact: true }).click(); await page.getByRole('button', { name: 'Zrušit', exact: true }).click();
+  await page.getByRole('button', { name: 'roundtrip.rlab', exact: true }).click();
+  await page.getByRole('button', { name: 'Zahodit změny', exact: true }).click();
+  await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click({ trial: true }); check('RECENT-REOPEN', JSON.parse(await h.save()).document.layers.length === 2);
+  for (const version of [1, 2, 3]) { await h.load(await readFile(`fixtures/projects/v${version}.json`)); const migrated = JSON.parse(await h.save()); check(`MIGRATION-V${version}`, migrated.version === 3 && migrated.document.layers[0].id === 'layer-a'); await h.exported(); }
+  await h.load(await readFile('fixtures/projects/v1.json')); const bitmapPixels = await h.exported(); pending = page.waitForEvent('download'); await page.getByRole('button', { name: 'Uložit .rlab', exact: true }).click(); const bitmapArchive = await readFile(await (await pending).path());
+  await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'bitmap.rlab', mimeType: 'application/zip', buffer: bitmapArchive }); await page.getByRole('button', { name: 'Uložit projekt (Ctrl+S)' }).click({ trial: true }); check('ARCHIVE-BITMAP-PIXELS', bitmapPixels.equals(await h.exported()));
+  let downloads = 0; page.on('download', () => downloads++);
+  await page.evaluate(() => { window.originalToBlob = HTMLCanvasElement.prototype.toBlob; HTMLCanvasElement.prototype.toBlob = function(callback, ...args) { const canvas = this; setTimeout(() => window.originalToBlob.call(canvas, callback, ...args), 500); }; });
+  await page.getByRole('button', { name: 'Export…', exact: true }).click(); await page.getByRole('button', { name: 'Exportovat', exact: true }).click(); await page.getByRole('status').filter({ hasText: 'Kódování obrazu…' }).waitFor(); await page.getByRole('button', { name: 'Zrušit', exact: true }).click(); await page.getByRole('button', { name: 'Exportovat', exact: true }).click({ trial: true });
+  check('EXPORT-CANCEL', downloads === 0 && (await page.locator('.status-message').innerText()).includes('Export zrušen')); await page.getByRole('button', { name: 'Zrušit', exact: true }).click(); await page.evaluate(() => { HTMLCanvasElement.prototype.toBlob = window.originalToBlob; });
+  for (const density of [1, 1.25, 1.5, 2]) {
+    const small = await h.browser.newPage({ viewport: { width: 1024, height: 700 }, deviceScaleFactor: density }); small.on('pageerror', error => h.errors.push(error.message));
+    try { await small.goto('http://127.0.0.1:4173'); await small.locator('.canvas-host canvas').waitFor(); await small.getByRole('button', { name: 'Dokument…', exact: true }).click(); const bounds = await small.getByRole('dialog').boundingBox(); check(`BROWSER-DENSITY-${density}`, bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= 1024 && bounds.y + bounds.height <= 700); if (density === 2) await small.screenshot({ path: 'test-results/release/minimum-density-200.png' }); } finally { await small.close(); }
+  }
+  assert.deepEqual(h.errors, []);
+  await mkdir('test-results/release', { recursive: true }); await writeFile('test-results/release/stabilization.json', JSON.stringify(results, null, 2)); console.log(JSON.stringify(results, null, 2));
+} finally { await h.browser.close(); }

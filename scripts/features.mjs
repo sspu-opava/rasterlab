@@ -35,7 +35,7 @@ try {
   await page.getByRole('button', { name: 'Demo experiment', exact: true }).click(); await page.locator('.layer-row').waitFor();
   const original = await exported();
   const originalInfo = await imageData(original); assert.equal(originalInfo.width, 1000); assert.equal(originalInfo.height, 1000); assert(originalInfo.pixel[0] > originalInfo.pixel[1]);
-  await page.getByRole('button', { name: 'Effects', exact: true }).click();
+  await page.getByRole('button', { name: 'Efekty', exact: true }).click();
   await addEffect('grayscale');
   const gray = await exported(); const grayInfo = await imageData(gray);
   assert.equal(grayInfo.pixel[0], grayInfo.pixel[1]); assert.equal(grayInfo.pixel[1], grayInfo.pixel[2]); assert(!gray.equals(original));
@@ -79,14 +79,14 @@ try {
   const projectDownload = await pendingSave; const saved = await readFile(await projectDownload.path()); const project = JSON.parse(saved);
   assert.equal(project.format, 'rasterlab'); assert.equal(project.version, 3); assert.equal(project.document.layers[0].effects.length, 5); assert(project.assets[0].dataUrl.startsWith('data:image/png;base64,'));
   assert(!project.document.layers[0].texture && project.document.layers[0].assetId === project.assets[0].id);
-  await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click(); await page.getByRole('dialog').getByRole('checkbox').check(); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
-  await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'roundtrip.json', mimeType: 'application/json', buffer: saved });
+  await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click(); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
+  await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'roundtrip.json', mimeType: 'application/json', buffer: saved });
   await page.getByRole('button', { name: 'Vypnout efekt Noise', exact: true }).waitFor();
   assert((await exported()).equals(deterministic), 'Project reload must restore the exact rendered image');
   assert.equal(await page.getByRole('button', { name: /^Zpět \(Ctrl\+Z\)/ }).isDisabled(), true, 'Opening a project resets history');
   const invalid = { ...project, version: 999 }; const errorCount = errors.length;
-  await page.locator('input[accept=".json,application/json"]').setInputFiles({ name: 'future.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(invalid)) });
-  await page.getByRole('alert').waitFor(); assert.equal(await page.getByRole('button', { name: 'Layers 1', exact: true }).count(), 1);
+  await page.locator('input[accept^=".json,"]').setInputFiles({ name: 'future.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(invalid)) });
+  await page.getByRole('alert').waitFor(); assert.equal(await page.getByRole('button', { name: 'Vrstvy 1', exact: true }).count(), 1);
   assert.equal(errors.length, errorCount + 1); assert(errors.at(-1).includes('[DOCUMENT]')); errors.pop(); await page.getByRole('button', { name: 'Zavřít chybu' }).click();
   await page.getByRole('button', { name: 'Přizpůsobit dokument pracovní ploše (F)' }).click();
   await page.screenshot({ path: 'test-results/effects-projects.png' });
@@ -94,13 +94,13 @@ try {
   // Known byte colors test actual secondary-texture and bit-operation output.
   await page.getByRole('button', { name: 'Nový dokument (Ctrl+N)' }).click();
   await page.getByRole('dialog').getByLabel('Šířka / px').fill('64'); await page.getByRole('dialog').getByLabel('Výška / px').fill('32');
-  await page.getByRole('dialog').getByRole('checkbox').check(); await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
+  await page.getByRole('button', { name: 'Vytvořit dokument', exact: true }).click();
   const colors = await page.evaluate(() => {
     const canvas = document.createElement('canvas'); canvas.width = 64; canvas.height = 32; const context = canvas.getContext('2d');
     return ['#aacc55', '#ff0000'].map(color => { context.fillStyle = color; context.fillRect(0, 0, 64, 32); return canvas.toDataURL('image/png').split(',')[1]; });
   });
   await page.locator('input[accept^="image/"]').setInputFiles(colors.map((base64, index) => ({ name: `color-${index}.png`, mimeType: 'image/png', buffer: Buffer.from(base64, 'base64') })));
-  await page.getByRole('button', { name: 'Layers 2', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Vrstvy 2', exact: true }).waitFor();
   const expected = { xor: [85, 204, 85, 255], and: [170, 0, 0, 255], or: [255, 204, 85, 255], nand: [85, 255, 255, 255] };
   for (const id of ['xor', 'and', 'or', 'nand']) {
     await addEffect(id); assert.deepEqual((await imageData(await exported())).pixel, expected[id], `${id} must apply byte operations on the GPU`);

@@ -6,6 +6,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
+const MAX_IPC: usize = 32 * 1024 * 1024;
 const MAX_ASSET: usize = 100 * 1024 * 1024;
 const MAX_PROJECT: usize = 300 * 1024 * 1024;
 
@@ -126,8 +127,8 @@ pub fn save_project(
     if !canonical.starts_with(&root) {
         return Err("Adresář assets opouští projektovou složku.".into());
     }
-    if assets.iter().map(|asset| asset.bytes.len()).sum::<usize>() > MAX_PROJECT {
-        return Err("Projekt je příliš velký.".into());
+    if assets.iter().map(|asset| asset.bytes.len()).sum::<usize>() + project_json.len() > MAX_IPC {
+        return Err("Desktopový přenos překračuje limit 32 MiB.".into());
     }
     for entry in &parsed.assets {
         let asset = assets
@@ -161,7 +162,7 @@ pub fn save_project(
 pub fn load_project(path: String) -> Result<LoadedProject, String> {
     let source = Path::new(&path);
     let root = project_root(source)?;
-    if fs::metadata(source).map_err(|e| e.to_string())?.len() > MAX_PROJECT as u64 {
+    if fs::metadata(source).map_err(|e| e.to_string())?.len() > MAX_IPC as u64 {
         return Err("Projekt je příliš velký.".into());
     }
     let project_json = fs::read_to_string(source).map_err(|e| e.to_string())?;
@@ -185,7 +186,7 @@ pub fn load_project(path: String) -> Result<LoadedProject, String> {
         }
         let size = fs::metadata(&file).map_err(|e| e.to_string())?.len() as usize;
         total += size;
-        if size > MAX_ASSET || total > MAX_PROJECT {
+        if size > MAX_ASSET || total + project_json.len() > MAX_IPC {
             return Err("Projekt je příliš velký.".into());
         }
         assets.push(AssetBytes {
@@ -207,7 +208,7 @@ pub fn write_export(path: String, bytes: Vec<u8>) -> Result<(), String> {
         .and_then(|value| value.to_str())
         .unwrap_or("")
         .to_ascii_lowercase();
-    if !["png", "jpg", "jpeg", "webp"].contains(&extension.as_str()) || bytes.len() > MAX_PROJECT {
+    if !["png", "jpg", "jpeg", "webp"].contains(&extension.as_str()) || bytes.len() > MAX_IPC {
         return Err("Neplatný export.".into());
     }
     atomic_write(destination, &bytes)
@@ -241,6 +242,32 @@ pub fn write_preset(path: String, preset_json: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unicode_archive_roundtrip_and_invalid_write_preserve_original() {
+        let directory = std::env::temp_dir().join(format!(
+            "rasterlab-žluťoučký-{}",
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        fs::create_dir(&directory).unwrap();
+        let path = directory
+            .join("Příliš žluťoučký.rlab")
+            .to_string_lossy()
+            .into_owned();
+        let bytes = b"PK\x03\x04test".to_vec();
+        write_archive(path.clone(), bytes.clone()).unwrap();
+        write_archive(path.clone(), bytes.clone()).unwrap();
+        assert!(write_archive(path.clone(), b"invalid".to_vec()).is_err());
+        assert_eq!(read_archive(path).unwrap(), bytes);
+        assert!(write_archive(
+            directory.join("bad.exe").to_string_lossy().into_owned(),
+            bytes
+        )
+        .is_err());
+        fs::remove_dir_all(directory).unwrap();
+    }
     #[test]
     fn rejects_traversal_and_future_versions() {
         assert!(manifest(r#"{"format":"rasterlab","version":4,"assets":[]}"#).is_err());
@@ -356,4 +383,32 @@ mod tests {
         assert_eq!(fs::read_to_string(path).unwrap(), valid);
         fs::remove_dir_all(directory).unwrap();
     }
+}
+
+#[tauri::command]
+pub fn write_archive(path: String, bytes: Vec<u8>) -> Result<(), String> {
+    let destination = Path::new(&path);
+    if !destination
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.eq_ignore_ascii_case("rlab"))
+        || bytes.len() > MAX_IPC
+        || !bytes.starts_with(b"PK\x03\x04")
+    {
+        return Err("Neplatný archiv nebo limit 32 MiB.".into());
+    }
+    atomic_write(destination, &bytes)
+}
+#[tauri::command]
+pub fn read_archive(path: String) -> Result<Vec<u8>, String> {
+    let source = Path::new(&path);
+    if !source
+        .extension()
+        .and_then(|value| value.to_str())
+        .is_some_and(|value| value.eq_ignore_ascii_case("rlab"))
+        || fs::metadata(source).map_err(|e| e.to_string())?.len() > MAX_IPC as u64
+    {
+        return Err("Neplatný archiv nebo limit 32 MiB.".into());
+    }
+    fs::read(source).map_err(|e| e.to_string())
 }

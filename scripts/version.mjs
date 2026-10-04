@@ -1,0 +1,13 @@
+import { readFile, writeFile } from 'node:fs/promises';
+const packageFile = JSON.parse(await readFile('package.json', 'utf8'));
+const version = process.argv[2] ?? packageFile.version;
+if (!/^\d+\.\d+\.\d+(?:-[a-z0-9.-]+)?$/.test(version)) throw new Error('Invalid version');
+packageFile.version = version;
+await writeFile('package.json', JSON.stringify(packageFile, null, 2) + '\n');
+const lock = JSON.parse(await readFile('package-lock.json', 'utf8')); lock.version = version; lock.packages[''].version = version; lock.packages[''].license = packageFile.license;
+await writeFile('package-lock.json', JSON.stringify(lock, null, 2) + '\n');
+const config = JSON.parse(await readFile('src-tauri/tauri.conf.json', 'utf8')); config.version = version; config.app.windows[0].title = `RasterLab ${version}`;
+await writeFile('src-tauri/tauri.conf.json', JSON.stringify(config, null, 2) + '\n');
+const cargo = await readFile('src-tauri/Cargo.toml', 'utf8');
+await writeFile('src-tauri/Cargo.toml', cargo.replace(/^version = ".*"/m, `version = "${version}"`));
+console.log(`Version synchronized: ${version}`);
